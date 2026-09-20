@@ -1,0 +1,43 @@
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.python-version
+
+# tooling
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# secrets and local config
+.env
+.env.*
+!.env.example
+
+# data: generated and sample payloads never enter git
+data/samples/*
+!data/samples/.gitkeep
+data/golden/*.csv
+data/golden/*.sta
+data/golden/*.xml
+uploads/
+*.sqlite3
+
+# node / frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ide / os
+.idea/
+.vscode/
+.DS_Store
