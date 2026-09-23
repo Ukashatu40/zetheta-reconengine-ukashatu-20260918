@@ -17,6 +17,7 @@ venv/
 .coverage.*
 htmlcov/
 coverage.xml
+text.txt
 
 # secrets and local config
 .env

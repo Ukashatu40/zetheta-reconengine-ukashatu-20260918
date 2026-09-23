@@ -1,0 +1,27 @@
+# Overlay for CI and local test runs: separate DB, separate volumes,
+# no port publishing (avoids clashing with a dev stack running alongside),
+# no restart policy (tests should fail loudly, not loop).
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.test.yml up -d postgres redis
+
+name: recon-test
+
+services:
+  postgres:
+    ports: []
+    environment:
+      POSTGRES_DB: recon_test
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    restart: "no"
+
+  redis:
+    ports: []
+    volumes: []
+    restart: "no"
+
+  api:
+    profiles: ["manual"] # not started by default under the test overlay
+
+volumes:
+  postgres_test_data:
