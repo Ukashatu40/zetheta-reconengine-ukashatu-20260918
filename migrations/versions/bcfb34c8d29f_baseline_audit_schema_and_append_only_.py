@@ -45,8 +45,7 @@ def upgrade() -> None:
     # variables through the application's connection pool configuration, not
     # via a password embedded in a migration. Locally, set it once:
     #   ALTER ROLE recon_audit WITH PASSWORD '<value of AUDIT_DB_PASSWORD>';
-    op.execute(
-        """
+    op.execute("""
         DO $$
         BEGIN
             IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'recon_audit') THEN
@@ -54,8 +53,7 @@ def upgrade() -> None:
             END IF;
         END
         $$;
-        """
-    )
+        """)
 
     op.execute("GRANT USAGE ON SCHEMA audit TO recon_audit")
 
@@ -65,29 +63,23 @@ def upgrade() -> None:
     # created in this schema by the migration owner automatically inherits
     # the correct restricted grants, without a human remembering to repeat
     # this on every subsequent migration.
-    op.execute(
-        """
+    op.execute("""
         ALTER DEFAULT PRIVILEGES IN SCHEMA audit
         GRANT INSERT, SELECT ON TABLES TO recon_audit
-        """
-    )
-    op.execute(
-        """
+        """)
+    op.execute("""
         ALTER DEFAULT PRIVILEGES IN SCHEMA audit
         REVOKE UPDATE, DELETE ON TABLES FROM recon_audit
-        """
-    )
+        """)
 
     # The application's normal connection role (recon_app, i.e. whatever
     # POSTGRES_USER is) also gets no UPDATE/DELETE on the audit schema by
     # default privilege, so even a bug in application code using the wrong
     # connection cannot mutate an existing audit row.
-    op.execute(
-        f"""
+    op.execute(f"""
         ALTER DEFAULT PRIVILEGES IN SCHEMA audit
         REVOKE UPDATE, DELETE ON TABLES FROM {op.get_bind().engine.url.username}
-        """
-    )
+        """)
 
 
 def downgrade() -> None:
