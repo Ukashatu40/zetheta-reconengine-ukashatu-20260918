@@ -13,6 +13,8 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+from recon.persistence.models import Base
+
 config = context.config
 
 if config.config_file_name is not None:
@@ -22,15 +24,15 @@ database_url = os.environ.get("DATABASE_URL")
 if not database_url:
     raise RuntimeError("DATABASE_URL must be set to run migrations")
 
-# Alembic's engine_from_config expects a psycopg2-style URL section; we
-# override the ini value directly with the env-sourced URL instead.
 config.set_main_option("sqlalchemy.url", database_url)
 
-# target_metadata is None for this baseline migration — it creates the audit
-# schema and its privileges by raw SQL, not via ORM metadata. WP1 Increment 4
-# introduces recon.persistence.models and wires target_metadata to it for
-# autogenerate support on subsequent migrations.
-target_metadata = None
+# Importing recon.persistence.models registers every ORM table on
+# Base.metadata. This enables `alembic check` and autogenerate for any
+# future non-partitioned table. Partitioned tables (raw_transactions) and
+# anything touching roles, grants or triggers are still hand-written — see
+# the core-persistence migration's docstring for why autogenerate doesn't
+# reliably diff PostgreSQL declarative partitioning.
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
