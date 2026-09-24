@@ -155,19 +155,15 @@ def upgrade() -> None:
 
     for lower, upper in _monthly_partition_bounds(date(2025, 1, 1), date(2027, 1, 1)):
         partition_name = f"raw_transactions_{lower.strftime('%Y_%m')}"
-        op.execute(
-            f"""
+        op.execute(f"""
             CREATE TABLE {partition_name}
             PARTITION OF raw_transactions
             FOR VALUES FROM ('{lower.isoformat()}') TO ('{upper.isoformat()}')
-            """
-        )
-    op.execute(
-        """
+            """)
+    op.execute("""
         CREATE TABLE raw_transactions_default
         PARTITION OF raw_transactions DEFAULT
-        """
-    )
+        """)
 
     # ------------------------------------------------------------------
     # audit.audit_log
@@ -233,8 +229,7 @@ def upgrade() -> None:
     # Defence-in-depth trigger: blocks UPDATE and DELETE for every role,
     # including the table owner. This is the mechanism that actually
     # enforces append-only — see the module docstring above.
-    op.execute(
-        """
+    op.execute("""
         CREATE OR REPLACE FUNCTION audit.forbid_mutation()
         RETURNS TRIGGER AS $$
         BEGIN
@@ -244,16 +239,13 @@ def upgrade() -> None:
                 OLD.event_id;
         END;
         $$ LANGUAGE plpgsql;
-        """
-    )
-    op.execute(
-        """
+        """)
+    op.execute("""
         CREATE TRIGGER audit_log_forbid_mutation
         BEFORE UPDATE OR DELETE ON audit.audit_log
         FOR EACH ROW
         EXECUTE FUNCTION audit.forbid_mutation();
-        """
-    )
+        """)
 
 
 def downgrade() -> None:
