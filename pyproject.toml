@@ -103,7 +103,7 @@ files = ["src", "tests"]
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["rapidfuzz.*", "jose.*", "passlib.*"]
+module = ["rapidfuzz.*", "jose.*", "passlib.*", "jsonschema.*"]
 ignore_missing_imports = true
 
 # ----------------------------------------------------------------------
