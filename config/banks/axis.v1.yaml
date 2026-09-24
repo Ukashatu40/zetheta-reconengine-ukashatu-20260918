@@ -1,0 +1,23 @@
+# config/banks/axis.v1.yaml
+bank_code: AXIS
+bank_name: Axis Bank
+config_version: axis.v1
+supported_formats:
+  - CSV
+timezone: Asia/Kolkata
+currency_default: INR
+settlement_cycle: "T+1"
+reconciliation_window_days: 1
+csv:
+  delimiter: ","
+  encoding: "utf-8"
+  has_header: true
+  date_format: "%d/%m/%Y"
+  amount_decimal_separator: "."
+  column_mapping:
+    reference: "Reference No"
+    txn_date: "Date"
+    amount: "Amount (INR)"
+    direction: "DR/CR"
+    counterparty_name: "Beneficiary"
+    narration: "Description"

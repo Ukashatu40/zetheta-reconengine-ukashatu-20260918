@@ -1,0 +1,23 @@
+# config/banks/hdfc.v1.yaml
+bank_code: HDFC
+bank_name: HDFC Bank
+config_version: hdfc.v1
+supported_formats:
+  - CSV
+timezone: Asia/Kolkata
+currency_default: INR
+settlement_cycle: "T+1"
+reconciliation_window_days: 1
+csv:
+  delimiter: ","
+  encoding: "utf-8"
+  has_header: true
+  date_format: "%d-%m-%Y"
+  amount_decimal_separator: "."
+  column_mapping:
+    reference: "Transaction Reference"
+    txn_date: "Value Date"
+    amount: "Amount"
+    direction: "Dr/Cr"
+    counterparty_name: "Counterparty Name"
+    narration: "Narration"

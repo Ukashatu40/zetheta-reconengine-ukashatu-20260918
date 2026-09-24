@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Bank configuration",
+  "type": "object",
+  "required": [
+    "bank_code",
+    "bank_name",
+    "config_version",
+    "supported_formats",
+    "timezone",
+    "currency_default",
+    "settlement_cycle",
+    "reconciliation_window_days"
+  ],
+  "properties": {
+    "bank_code": { "type": "string", "minLength": 1, "maxLength": 20 },
+    "bank_name": { "type": "string", "minLength": 1 },
+    "config_version": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+\\.v[0-9]+$"
+    },
+    "supported_formats": {
+      "type": "array",
+      "items": { "enum": ["CSV", "MT940", "CAMT053"] },
+      "minItems": 1
+    },
+    "timezone": { "type": "string" },
+    "currency_default": { "type": "string", "pattern": "^[A-Za-z]{3}$" },
+    "settlement_cycle": { "type": "string" },
+    "reconciliation_window_days": { "type": "integer", "minimum": 0 },
+    "csv": {
+      "type": "object",
+      "required": ["column_mapping", "date_format"],
+      "properties": {
+        "delimiter": { "type": "string", "minLength": 1, "maxLength": 1 },
+        "encoding": { "type": "string" },
+        "has_header": { "type": "boolean" },
+        "column_mapping": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "date_format": { "type": "string" },
+        "amount_decimal_separator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1
+        },
+        "amount_thousands_separator": {
+          "type": ["string", "null"],
+          "maxLength": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

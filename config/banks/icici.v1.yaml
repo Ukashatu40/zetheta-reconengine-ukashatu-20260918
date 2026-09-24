@@ -1,0 +1,27 @@
+# config/banks/icici.v1.yaml
+# Deliberately a different column order and header naming to HDFC, per
+# D10's sample-data note ("Different column order from HDFC") and B4.1's
+# format-change scenario — this is the file WP4's hot-swap/schema-
+# fingerprinting work will test against.
+bank_code: ICICI
+bank_name: ICICI Bank
+config_version: icici.v1
+supported_formats:
+  - CSV
+timezone: Asia/Kolkata
+currency_default: INR
+settlement_cycle: "T+1"
+reconciliation_window_days: 1
+csv:
+  delimiter: ","
+  encoding: "utf-8"
+  has_header: true
+  date_format: "%Y-%m-%d"
+  amount_decimal_separator: "."
+  column_mapping:
+    reference: "Txn Ref No"
+    txn_date: "Txn Date"
+    amount: "Txn Amount"
+    direction: "Type"
+    counterparty_name: "Party Name"
+    narration: "Remarks"
