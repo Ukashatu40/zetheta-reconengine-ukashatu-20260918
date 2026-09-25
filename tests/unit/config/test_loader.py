@@ -51,7 +51,10 @@ def _valid_config_dict() -> dict[str, Any]:
 def test_every_committed_bank_config_loads_successfully(config_path: Path) -> None:
     config = load_bank_config(config_path)
     assert config.bank_code
-    assert config.csv is not None
+    if "CSV" in config.supported_formats:
+        assert config.csv is not None
+    if "MT940" in config.supported_formats:
+        assert config.mt940 is not None
 
 
 def test_valid_config_loads_with_expected_fields(tmp_path: Path) -> None:

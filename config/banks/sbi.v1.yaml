@@ -1,0 +1,12 @@
+# config/banks/sbi.v1.yaml
+bank_code: SBI
+bank_name: State Bank of India
+config_version: sbi.v1
+supported_formats:
+  - MT940
+timezone: Asia/Kolkata
+currency_default: INR
+settlement_cycle: "T+1"
+reconciliation_window_days: 1
+mt940:
+  decimal_separator: ","
