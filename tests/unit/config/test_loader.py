@@ -55,6 +55,7 @@ def test_every_committed_bank_config_loads_successfully(config_path: Path) -> No
         assert config.csv is not None
     if "MT940" in config.supported_formats:
         assert config.mt940 is not None
+    # CAMT053 has no bank-specific config section — nothing to assert here.
 
 
 def test_valid_config_loads_with_expected_fields(tmp_path: Path) -> None:

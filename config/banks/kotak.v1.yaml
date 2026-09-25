@@ -1,0 +1,10 @@
+# config/banks/kotak.v1.yaml
+bank_code: KOTAK
+bank_name: Kotak Mahindra Bank
+config_version: kotak.v1
+supported_formats:
+  - CAMT053
+timezone: Asia/Kolkata
+currency_default: INR
+settlement_cycle: "T+1"
+reconciliation_window_days: 1
