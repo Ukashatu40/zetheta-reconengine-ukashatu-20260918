@@ -1,9 +1,10 @@
-# config/banks/axis.v1.yaml
+# config/banks/axis.v1.yaml — EDIT: add MT940 to supported_formats, add mt940 section
 bank_code: AXIS
 bank_name: Axis Bank
 config_version: axis.v1
 supported_formats:
   - CSV
+  - MT940
 timezone: Asia/Kolkata
 currency_default: INR
 settlement_cycle: "T+1"
@@ -21,3 +22,5 @@ csv:
     direction: "DR/CR"
     counterparty_name: "Beneficiary"
     narration: "Description"
+mt940:
+  decimal_separator: "."

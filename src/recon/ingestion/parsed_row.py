@@ -23,6 +23,7 @@ class ParseErrorCode(StrEnum):
     DUPLICATE_HEADER = "DUPLICATE_HEADER"
     ENCODING_ERROR = "ENCODING_ERROR"
     ROW_LENGTH_MISMATCH = "ROW_LENGTH_MISMATCH"
+    MALFORMED_FIELD = "MALFORMED_FIELD"
 
 
 @dataclass(frozen=True, slots=True)

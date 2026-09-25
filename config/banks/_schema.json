@@ -51,6 +51,14 @@
         }
       },
       "additionalProperties": false
+    },
+    "mt940": {
+      "type": "object",
+      "required": ["decimal_separator"],
+      "properties": {
+        "decimal_separator": { "type": "string", "enum": [",", "."] }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

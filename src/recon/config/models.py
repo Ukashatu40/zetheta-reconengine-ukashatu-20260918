@@ -17,6 +17,12 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pydantic import BaseModel, ConfigDict, field_validator
 
 
+class Mt940FormatConfig(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    decimal_separator: str
+
+
 class CsvFormatConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -50,6 +56,7 @@ class BankConfig(BaseModel):
     settlement_cycle: str
     reconciliation_window_days: int
     csv: CsvFormatConfig | None = None
+    mt940: Mt940FormatConfig | None = None
 
     @field_validator("timezone")
     @classmethod
