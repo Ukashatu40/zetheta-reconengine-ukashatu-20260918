@@ -95,3 +95,15 @@ def test_normalise_mt940_date_yymmdd() -> None:
 def test_to_utc_date_extracts_calendar_date() -> None:
     result = normalise_timestamp("15-03-2026", "%d-%m-%Y", "Asia/Kolkata")
     assert to_utc_date(result) == date(2026, 3, 14)
+
+
+def test_local_date_reflects_source_statement_date_not_utc_shifted_date() -> None:
+    """Guards the exact defect fixed in WP3 Increment 3: for a positive
+    UTC-offset zone (IST, +5:30) with no time component, midnight local
+    time converts to the PREVIOUS day in UTC. local_date preserves the
+    date as it appears on the bank's own statement; only `.utc` reflects
+    the shifted instant."""
+    result = normalise_timestamp("15-03-2026", "%d-%m-%Y", "Asia/Kolkata")
+
+    assert result.local_date == date(2026, 3, 15)  # matches the statement
+    assert result.utc.date() == date(2026, 3, 14)  # the UTC instant, shifted back a day

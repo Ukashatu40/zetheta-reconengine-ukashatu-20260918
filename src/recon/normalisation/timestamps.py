@@ -18,6 +18,14 @@ UTC the SAME day, not the next. See
 docs/ASSESSMENT_ERRORS_AND_CORRECTIONS.md AE-05. This module's tests
 pin the correct direction explicitly so that error is never silently
 reproduced.
+
+`local_date` vs `.utc.date()`: for a date-only value (no time component),
+midnight local time in any positive-UTC-offset zone converts to the
+PREVIOUS calendar day in UTC. `local_date` preserves the date exactly as
+it appears on the bank's own statement; `.utc` carries the precise
+instant. Canonical fields that must match what the statement says
+(txn_date, settlement_date — see recon.normalisation.pipeline) use
+`local_date`, never `.utc.date()`.
 """
 
 from __future__ import annotations
@@ -38,6 +46,7 @@ class TimestampNormalisationError(ValueError):
 @dataclass(frozen=True, slots=True)
 class NormalisedTimestamp:
     utc: datetime
+    local_date: date
     original_text: str
     source_timezone: str
 
@@ -97,7 +106,10 @@ def normalise_timestamp(
 
     original = date_text if time_text is None else f"{date_text} {time_text}"
     return NormalisedTimestamp(
-        utc=utc_datetime, original_text=original, source_timezone=source_timezone
+        utc=utc_datetime,
+        local_date=parsed_date,
+        original_text=original,
+        source_timezone=source_timezone,
     )
 
 
@@ -110,7 +122,12 @@ def normalise_mt940_date(yymmdd: str, source_timezone: str) -> NormalisedTimesta
 
 
 def to_utc_date(normalised: NormalisedTimestamp) -> date:
-    """Convenience accessor: the calendar date (in UTC) a normalised
-    timestamp falls on — this is what CanonicalTransaction.txn_date
-    ultimately needs, as distinct from the full UTC datetime."""
+    """Convenience accessor: the calendar date of the UTC INSTANT a
+    normalised timestamp resolves to. NOT the same as `local_date` — for
+    a date-only value in a positive-UTC-offset zone (e.g. IST), this can
+    be one calendar day earlier than the source statement's own date
+    (midnight IST = the previous UTC day). Canonical fields that must
+    match the bank's own stated date (txn_date, settlement_date) use
+    `.local_date`, never this function — see
+    recon.normalisation.pipeline's module docstring."""
     return normalised.utc.date()
