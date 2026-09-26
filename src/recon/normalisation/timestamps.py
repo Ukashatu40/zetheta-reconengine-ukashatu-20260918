@@ -70,7 +70,12 @@ def normalise_timestamp(
         ) from exc
 
     try:
-        parsed_date = datetime.strptime(date_text.strip(), date_format).replace(tzinfo=UTC).date()
+        # Only the calendar date is needed here — parsed_date is later
+        # combined with a time and given the bank's REAL configured zone
+        # via aware_local.replace(tzinfo=zone) below. Attaching a
+        # timezone at this intermediate step would be discarded anyway
+        # by .date(), so naive parsing is correct, not an oversight.
+        parsed_date = datetime.strptime(date_text.strip(), date_format).date()  # noqa: DTZ007
     except ValueError as exc:
         raise TimestampNormalisationError(
             f"{date_text!r} does not match expected format {date_format!r}"
@@ -78,9 +83,7 @@ def normalise_timestamp(
 
     if time_text is not None and time_text.strip():
         try:
-            parsed_time = (
-                datetime.strptime(time_text.strip(), time_format).replace(tzinfo=UTC).time()
-            )
+            parsed_time = datetime.strptime(time_text.strip(), time_format).time()  # noqa: DTZ007
         except ValueError as exc:
             raise TimestampNormalisationError(
                 f"{time_text!r} does not match expected time format {time_format!r}"
