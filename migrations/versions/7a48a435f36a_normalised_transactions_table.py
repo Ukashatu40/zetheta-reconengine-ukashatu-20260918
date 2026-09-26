@@ -98,14 +98,11 @@ def upgrade() -> None:
         sa.Column("normalised_reference", sa.String(200), nullable=True),
         sa.Column("match_status", sa.String(20), nullable=False, server_default="UNMATCHED"),
         sa.PrimaryKeyConstraint("id", "txn_date", name="pk_normalised_transactions"),
+        sa.CheckConstraint("direction IN ('DR', 'CR')", name="direction_valid"),
         sa.CheckConstraint(
-            "direction IN ('DR', 'CR')", name="ck_normalised_transactions_direction_valid"
+            "match_status IN ('UNMATCHED', 'CLAIMED', 'MATCHED')", name="match_status_valid"
         ),
-        sa.CheckConstraint(
-            "match_status IN ('UNMATCHED', 'CLAIMED', 'MATCHED')",
-            name="ck_normalised_transactions_match_status_valid",
-        ),
-        sa.CheckConstraint("amount >= 0", name="ck_normalised_transactions_amount_non_negative"),
+        sa.CheckConstraint("amount >= 0", name="amount_non_negative"),
         postgresql_partition_by="RANGE (txn_date)",
     )
 
