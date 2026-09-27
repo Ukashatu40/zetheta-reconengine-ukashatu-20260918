@@ -180,3 +180,41 @@ visible rather than discovered by a reviewer reading code.
 **Test:** none directly — this is a schema-authoring discipline issue rather than something a unit test naturally catches (a passing test doesn't know a constraint's real name is different from its intended one). The mitigation is procedural: any new migration's constraint names are checked against `\d <table>` output before being considered done, not assumed correct from the migration source alone.
 
 **Broader lesson:** "the migration ran without error" is not evidence a migration did what was intended — PostgreSQL's identifier truncation is a silent-failure mode by design, and the fix is to always verify against the database's own `\d` output, never against the SQL that was submitted to it.
+
+---
+
+## AE-09 addendum: the minimum-evidence rule's trigger condition is currently unreachable
+
+Recorded during WP4 Increment 4 test-writing, not a new PDF error — a
+follow-up finding on AE-09 (Phase 0 report Section 5.2, item C9).
+
+**What was found:** working through the actual arithmetic of A3.4's
+weights (reference 0.35, amount 0.25, date 0.15, counterparty 0.10,
+direction+currency gates fixed at 0.15 combined), a real transaction pair
+cannot exceed 0.85 confidence while fewer than two of
+{reference, amount, date, counterparty} individually clear their own
+field-level threshold. The only field offering continuous (non-binary)
+partial credit without necessarily clearing its threshold is reference,
+via Jaro-Winkler similarity — and its maximum non-clearing contribution
+(just under the 0.92 threshold) is 0.35 x 0.92 ~= 0.32, which combined
+with the 0.15 gate total (0.47) falls far short of 0.85.
+
+**Consequence:** `recon.matching.scoring.weighted._decide`'s AE-09 branch
+(`confidence > 0.85 and independent_signal_count < 2` -> REVIEW instead
+of AUTO_MATCH) is real, correct, defensible code, but is not currently
+reachable through `score_candidate()` with real transaction data under
+A3.4's stated weights. It is tested directly against `_decide()` with
+synthetic arguments (`tests/unit/matching/test_weighted.py::test_decide_directly_exercises_the_ae09_branch`)
+rather than through a realistic transaction pair, since no such pair
+exists under these weights.
+
+**Why the rule is kept anyway:** it is inexpensive defense-in-depth
+against a future change (a reweighting, or an additional continuously-
+scored field) that could make the scenario reachable. Removing it would
+save nothing and would remove a safety net for exactly the kind of
+change this codebase should be robust to.
+
+**Test:** `test_decide_directly_exercises_the_ae09_branch` (direct), plus
+`test_reference_and_amount_clearing_with_no_date_or_counterparty_is_reviewed_not_matched`
+(an AE-08 half-open-band case that was originally miswritten as an AE-09
+case before the arithmetic was checked properly).
