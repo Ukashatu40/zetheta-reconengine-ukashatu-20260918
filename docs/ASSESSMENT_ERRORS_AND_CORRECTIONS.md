@@ -145,3 +145,38 @@ visible rather than discovered by a reviewer reading code.
   `recon.ingestion.parsers.mt940.lexer` but is currently dropped rather
   than attached to any row or persisted. None of the current sample
   data requires it.
+
+---
+
+## AE-05: date-only timestamps silently shift backward a calendar day for positive-UTC-offset banks
+
+**Not a PDF error** — this is a bug introduced in this codebase's own WP3 Increment 1, caught and fixed in Increment 3 before it reached persisted data. Recorded here because it's exactly the class of defect A5.2 warns about, and because the fix shapes how `txn_date`/`settlement_date` are derived everywhere in the normalisation pipeline.
+
+**What happened:** `normalise_timestamp` converted a date-only value (no time component) to UTC by assuming midnight in the bank's local timezone, then returning that UTC instant. For any bank in a positive UTC-offset zone — every Indian bank, UTC+5:30 — midnight IST converts to 18:30 UTC on the _previous_ calendar day. Using `.utc.date()` as the canonical `txn_date` would therefore have made every transaction from every Indian bank appear one day earlier than the date printed on the actual bank statement.
+
+**Why it wasn't caught sooner:** the individual `normalise_timestamp` unit tests passed — they correctly asserted the (accurate) UTC-shifted date, since that's genuinely what midnight IST converts to. The bug was only visible one layer up, in how a _caller_ would use that result. It surfaced while designing `NormalisationPipeline` (Increment 3), before any caller actually shipped with the bug — not from a failing test.
+
+**Correction implemented:** `NormalisedTimestamp` gained a second field, `local_date` — the calendar date exactly as parsed, before any UTC conversion. `NormalisationPipeline` uses `local_date` for `txn_date` and `settlement_date`; `.utc` is preserved separately for anything that genuinely needs the precise instant (audit timestamps, ordering).
+
+**Test:** `test_local_date_reflects_source_statement_date_not_utc_shifted_date` (`tests/unit/normalisation/test_timestamps.py`) and `test_txn_date_uses_local_calendar_date_not_utc_shifted_date` (`tests/unit/normalisation/test_pipeline.py`) — both pin the correct behaviour permanently, one at the timestamp-utility level and one at the pipeline level, so a future regression at either layer is caught.
+
+**Broader lesson recorded for later work:** this is the general hazard A5.2 was gesturing at with its (arithmetically wrong) worked example — timezone conversion is easy to get subtly backwards, and a naive implementation frequently agrees with itself in isolated tests while still being wrong for the caller's actual purpose. Worth remembering when WP4's date-offset matching rule and WP6's reporting layer consume these fields.
+
+---
+
+## AE-06: check-constraint names silently corrupted by Postgres identifier truncation (recurring pattern, 3 occurrences)
+
+**Not a PDF error** — an implementation bug pattern in this codebase's own migrations, occurring three times before the root cause was addressed structurally. Recorded because it's a real risk to any future migration author on this project, not just a historical footnote.
+
+**What happened:** `recon.persistence.models.base.Base`'s `NAMING_CONVENTION` (`ck_%(table_name)s_%(constraint_name)s`) automatically prefixes a bare constraint name with `ck_<table>_` when SQLAlchemy's ORM builds the constraint. Hand-written Alembic migrations construct `sa.CheckConstraint` objects directly, bypassing that convention machinery entirely — so a migration author who copies the ORM model's _already-prefixed_ name (e.g. `"ck_ingestion_files_status_valid"`) into the migration produces a **doubly-prefixed** name. PostgreSQL silently truncates any identifier over 63 bytes and appends a hash to disambiguate, so the doubled prefix doesn't error — it just becomes an unreadable, hash-suffixed name that nobody would think to query for.
+
+**Occurrences:**
+
+1. `ingestion_files` and `raw_transactions` (WP1 Increment 4) — caught and fixed before either table was ever queried in anger, via a full `docker compose down -v` and clean re-migration since nothing had been committed yet.
+2. `normalised_transactions` (WP3 Increment 4) — caught only _after_ the migration had already run against both the dev and test databases, requiring a follow-up `ALTER TABLE ... RENAME CONSTRAINT` migration (`3f392c4a49dd`) rather than a clean re-migration, since dropping and recreating would have discarded partition structure unnecessarily.
+
+**Correction implemented:** the rule going forward — a migration's `sa.CheckConstraint(name=...)` argument is always the **bare** name (`"status_valid"`, never `"ck_ingestion_files_status_valid"`), exactly matching what the ORM model itself declares. This is now stated explicitly in this document specifically so a future migration (WP4 onward) doesn't reintroduce it a fourth time.
+
+**Test:** none directly — this is a schema-authoring discipline issue rather than something a unit test naturally catches (a passing test doesn't know a constraint's real name is different from its intended one). The mitigation is procedural: any new migration's constraint names are checked against `\d <table>` output before being considered done, not assumed correct from the migration source alone.
+
+**Broader lesson:** "the migration ran without error" is not evidence a migration did what was intended — PostgreSQL's identifier truncation is a silent-failure mode by design, and the fix is to always verify against the database's own `\d` output, never against the SQL that was submitted to it.
