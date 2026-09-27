@@ -11,6 +11,7 @@ from __future__ import annotations
 from recon.persistence.models.audit import AuditLog
 from recon.persistence.models.base import Base
 from recon.persistence.models.ingestion import IngestionFile, RawTransaction
+from recon.persistence.models.match_results import MatchResult
 from recon.persistence.models.matching import MatchClaim
 from recon.persistence.models.normalised import NormalisedTransaction
 
@@ -19,6 +20,7 @@ __all__ = [
     "Base",
     "IngestionFile",
     "MatchClaim",
+    "MatchResult",
     "NormalisedTransaction",
     "RawTransaction",
 ]
