@@ -114,3 +114,30 @@ def test_two_different_transactions_can_both_be_claimed(db_session: Session) -> 
     assert claim_a.id != claim_b.id
     assert service.is_claimed(claim_a.normalised_transaction_id)
     assert service.is_claimed(claim_b.normalised_transaction_id)
+
+
+def test_failed_claim_does_not_discard_earlier_uncommitted_claims(db_session: Session) -> None:
+    """Regression: a conflict used to call session.rollback(), wiping
+    every pending change in the session, not just the failed claim."""
+    service = ClaimsService(db_session)
+    kept = service.claim(uuid.uuid4(), "INTERNAL")
+    contested = uuid.uuid4()
+    service.claim(contested, "INTERNAL")
+
+    with pytest.raises(ClaimConflictError):
+        service.claim(contested, "INTERNAL")
+
+    assert service.is_claimed(kept.normalised_transaction_id) is True
+
+
+def test_claim_pair_conflict_leaves_no_orphaned_claim_on_the_other_side(
+    db_session: Session,
+) -> None:
+    service = ClaimsService(db_session)
+    internal_id, external_id = uuid.uuid4(), uuid.uuid4()
+    service.claim(external_id, "EXTERNAL")  # external side already taken
+
+    with pytest.raises(ClaimConflictError):
+        service.claim_pair(internal_id, external_id)
+
+    assert service.is_claimed(internal_id) is False

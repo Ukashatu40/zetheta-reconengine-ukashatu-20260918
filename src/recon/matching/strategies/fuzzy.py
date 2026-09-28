@@ -68,8 +68,9 @@ class FuzzyMatchingStrategy:
                 continue
 
             try:
-                internal_claim = self._claims.claim(best.internal_txn.id, "INTERNAL")
-                external_claim = self._claims.claim(external_txn.id, "EXTERNAL")
+                internal_claim, external_claim = self._claims.claim_pair(
+                    best.internal_txn.id, external_txn.id
+                )
             except ClaimConflictError:
                 skipped_conflicts += 1
                 continue
@@ -125,7 +126,7 @@ class FuzzyMatchingStrategy:
             run_id=self._run_id,
             match_type="FUZZY",
             status=status,
-            confidence=round(scored.confidence, 3),
+            confidence=scored.confidence,
             internal_transaction_id=scored.internal_txn.id,
             external_transaction_id=scored.external_txn.id,
             field_scores=scored.field_scores,

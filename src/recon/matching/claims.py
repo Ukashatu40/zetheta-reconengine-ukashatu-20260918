@@ -32,16 +32,13 @@ from recon.persistence.models import MatchClaim
 
 class ClaimConflictError(ValueError):
     """Raised when a normalised transaction already has an ACTIVE claim.
-    This is the expected, correct outcome of the exclusivity guarantee
-    working — not a bug to route around. A caller catching this should
-    treat the candidate as unavailable and move on to the next one, never
-    retry the same claim."""
+    This is the expected outcome of the exclusivity guarantee working,
+    not a bug to route around. Callers treat the candidate as unavailable
+    and move on; they never retry the same claim."""
 
-    def __init__(self, normalised_transaction_id: uuid.UUID) -> None:
-        self.normalised_transaction_id = normalised_transaction_id
-        super().__init__(
-            f"normalised_transaction_id={normalised_transaction_id} already has " "an active claim"
-        )
+    def __init__(self, *normalised_transaction_ids: uuid.UUID) -> None:
+        self.normalised_transaction_ids = normalised_transaction_ids
+        super().__init__(f"one of {list(normalised_transaction_ids)} already has an active claim")
 
 
 class ClaimsService:
@@ -55,29 +52,43 @@ class ClaimsService:
         *,
         match_result_id: uuid.UUID | None = None,
     ) -> MatchClaim:
-        """Attempts to create an ACTIVE claim. Raises ClaimConflictError
-        if one already exists for this transaction — the database's
-        unique partial index is the actual source of truth; this method
-        translates the resulting IntegrityError into a typed exception a
-        caller can catch specifically, rather than a generic
-        IntegrityError that could mean several different things.
-
-        Flushes immediately rather than waiting for the caller's own
-        commit, so the conflict (if any) surfaces at the call site, not
-        at some later, harder-to-diagnose flush."""
+        """Attempts to create an ACTIVE claim inside a SAVEPOINT, so a
+        conflict rolls back only this claim, never the caller's earlier
+        uncommitted work. (An earlier version called session.rollback(),
+        which discarded the entire session's pending changes.)"""
         claim = MatchClaim(
             normalised_transaction_id=normalised_transaction_id,
             match_result_id=match_result_id,
             role=role,
             status="ACTIVE",
         )
-        self._session.add(claim)
         try:
-            self._session.flush()
+            with self._session.begin_nested():
+                self._session.add(claim)
+                self._session.flush()
         except IntegrityError as exc:
-            self._session.rollback()
             raise ClaimConflictError(normalised_transaction_id) from exc
         return claim
+
+    def claim_pair(
+        self, internal_id: uuid.UUID, external_id: uuid.UUID
+    ) -> tuple[MatchClaim, MatchClaim]:
+        """Claims both sides of a prospective match atomically: either
+        both claims exist afterwards or neither does. Prevents an
+        orphaned ACTIVE claim on one side when the other side conflicts."""
+        internal_claim = MatchClaim(
+            normalised_transaction_id=internal_id, role="INTERNAL", status="ACTIVE"
+        )
+        external_claim = MatchClaim(
+            normalised_transaction_id=external_id, role="EXTERNAL", status="ACTIVE"
+        )
+        try:
+            with self._session.begin_nested():
+                self._session.add_all([internal_claim, external_claim])
+                self._session.flush()
+        except IntegrityError as exc:
+            raise ClaimConflictError(internal_id, external_id) from exc
+        return internal_claim, external_claim
 
     def finalise(self, claim: MatchClaim, match_result_id: uuid.UUID) -> None:
         """Records the match_result_id a previously-created claim belongs
