@@ -118,7 +118,7 @@ def test_invalid_date_calendar_value_is_flagged() -> None:
 
 def test_negative_amount_parses_without_a_parse_error() -> None:
     """Sign-vs-direction consistency is a normalisation-stage rule
-    (CanonicalTransaction's validator, AE-05), not a parsing-stage one.
+    (CanonicalTransaction's validator, DD-01), not a parsing-stage one.
     The raw text is captured as-is; rejecting it happens one stage later."""
     csv_text = f"{_HEADER}\nREF001,15-03-2026,-1500.00,CR,Acme,Note\n"
     rows = _parse(csv_text)

@@ -146,7 +146,7 @@ class CanonicalTransaction(BaseModel):
     @field_validator("amount")
     @classmethod
     def _amount_non_negative(cls, value: Decimal) -> Decimal:
-        # AE-05 / D2 normalisation rule: sign is carried by `direction`,
+        # DD-01 / D2 normalisation rule: sign is carried by `direction`,
         # never by the amount itself. A negative amount here means an
         # upstream parser failed to separate sign from magnitude.
         if value < 0:

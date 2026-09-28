@@ -23,8 +23,8 @@ def test_uppercased() -> None:
 
 
 def test_double_slash_bank_reference_separator_is_preserved() -> None:
-    """MT940's REF.../BANKREF convention (AE-03's extended-reference
-    deviation) must survive cleaning intact — it's structurally
+    """MT940's REF.../BANKREF convention (MT940 deviation 4, extended :61: reference)
+    must survive cleaning intact — it's structurally
     meaningful, not formatting noise."""
     assert clean_reference("REF0001234567//BANKREF001") == "REF0001234567//BANKREF001"
 

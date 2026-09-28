@@ -15,7 +15,7 @@ convert to UTC) is identical regardless of source format.
 A5.2's own worked example ("11:30 PM IST on 15 March... recorded as 16
 March in UTC+0") is arithmetically wrong as stated — 23:30 IST is 18:00
 UTC the SAME day, not the next. See
-docs/ASSESSMENT_ERRORS_AND_CORRECTIONS.md AE-05. This module's tests
+docs/ASSESSMENT_ERRORS_AND_CORRECTIONS.md AE-33. This module's tests
 pin the correct direction explicitly so that error is never silently
 reproduced.
 

@@ -11,7 +11,7 @@ it extracts mapped fields as raw text and flags rows malformed at the
 parsing level (missing required columns, unparsable date/amount text,
 structural CSV problems). It deliberately does not reject a negative
 amount: sign-vs-direction consistency is a normalisation-stage rule (see
-CanonicalTransaction's validator, AE-05), not a parsing-stage one — the
+CanonicalTransaction's validator, DD-01), not a parsing-stage one — the
 two stages are kept independently testable.
 """
 
@@ -155,8 +155,8 @@ class CSVParser:
             # Parsing here only validates that the text matches the
             # bank's configured format — the resulting datetime is
             # discarded, not stored or compared. Timezone attachment is
-            # a normalisation-stage concern (recon.normalisation,
-            # AE-02/AE-03's UTC-conversion rules), not a parsing-stage
+            # a normalisation-stage concern (recon.normalisation.timestamps, R38)
+            # not a parsing-stage
             # one, so a naive datetime is correct at this layer.
             datetime.strptime(txn_date, csv_config.date_format)  # noqa: DTZ007
         except ValueError:

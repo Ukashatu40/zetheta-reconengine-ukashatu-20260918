@@ -193,3 +193,26 @@ def test_low_confidence_is_no_match() -> None:
 
     assert scored.confidence < 0.60
     assert scored.decision == MatchDecision.NO_MATCH
+
+
+def test_confidence_exactly_at_auto_threshold_goes_to_review_not_auto_match() -> None:
+    """AE-08: a tie at 0.85 resolves to the safer bucket."""
+    decision, _ = _decide(confidence=0.85, hard_constraints_passed=True, independent_signal_count=3)
+    assert decision == MatchDecision.REVIEW
+
+
+def test_confidence_exactly_at_review_threshold_goes_to_review() -> None:
+    """AE-08: 0.60 is inside the review band, not below it."""
+    decision, _ = _decide(confidence=0.60, hard_constraints_passed=True, independent_signal_count=3)
+    assert decision == MatchDecision.REVIEW
+
+
+def test_confidence_is_quantised_to_three_decimals_before_deciding() -> None:
+    """IB-04: the decided value must equal the value that gets persisted.
+    A partial-similarity reference produces a many-decimal raw score."""
+    internal = _txn(normalised_reference="REF0001234567")
+    external = _txn(id=uuid.uuid4(), source="EXTERNAL", normalised_reference="REF0001234568")
+
+    scored = score_candidate(internal, external, amount_tolerance_minor=100)
+
+    assert scored.confidence == round(scored.confidence, 3)
