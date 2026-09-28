@@ -10,7 +10,7 @@ database-enforced impossibility. See
 recon.persistence.models.matching.MatchClaim's module docstring for the
 full reasoning.
 
-Constraint names are bare (per AE-06,
+Constraint names are bare (per IB-02,
 docs/ASSESSMENT_ERRORS_AND_CORRECTIONS.md) — checked against \\d output
 after applying, not assumed correct from this file alone.
 """

@@ -86,6 +86,10 @@ class ExactMatchingStrategy:
             internal_txn.match_status = "MATCHED"
             external_txn.match_status = "MATCHED"
 
+            # IB-05: the internal is consumed. Remove it from the bucket so
+            # a later external with the same key cannot pick it again.
+            bucket.remove(internal_txn)
+
             matched_count += 1
             result_ids.append(match_result.id)
 

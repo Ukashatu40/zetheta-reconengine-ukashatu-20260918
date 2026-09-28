@@ -197,3 +197,29 @@ def test_already_claimed_internal_transaction_is_skipped_not_double_matched(
     assert outcome.matched_count == 0
     assert outcome.skipped_claim_conflict_count == 1
     assert external_txn.match_status == "UNMATCHED"
+
+
+def test_second_external_uses_a_free_internal_instead_of_reusing_a_matched_one(
+    db_session: Session,
+) -> None:
+    """IB-05: two internals and two externals share one exact key. Each
+    external must get its own internal; the second must not pick the
+    internal the first already consumed and then be skipped."""
+    ingestion_file = _make_ingestion_file(db_session)
+    internal_a = _make_txn(ingestion_file.id, source="INTERNAL")
+    internal_b = _make_txn(ingestion_file.id, source="INTERNAL")
+    external_1 = _make_txn(ingestion_file.id, source="EXTERNAL")
+    external_2 = _make_txn(ingestion_file.id, source="EXTERNAL")
+    db_session.add_all([internal_a, internal_b, external_1, external_2])
+    db_session.flush()
+
+    strategy = ExactMatchingStrategy(db_session, run_id="test-ib05")
+    outcome = strategy.run([internal_a, internal_b], [external_1, external_2])
+
+    assert outcome.matched_count == 2
+    assert outcome.skipped_claim_conflict_count == 0
+
+    results = db_session.query(MatchResult).filter(MatchResult.run_id == "test-ib05").all()
+    assert {r.internal_transaction_id for r in results} == {internal_a.id, internal_b.id}
+    assert internal_a.match_status == "MATCHED"
+    assert internal_b.match_status == "MATCHED"
