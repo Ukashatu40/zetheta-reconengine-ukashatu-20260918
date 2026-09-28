@@ -29,7 +29,7 @@ Weights, per A3.4's table:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from decimal import Decimal
+from decimal import ROUND_HALF_EVEN, Decimal
 from enum import StrEnum
 
 from recon.matching.scoring.fields import (
@@ -104,7 +104,7 @@ def score_candidate(
         "currency": currency_score,
     }
 
-    confidence = float(
+    raw_confidence = (
         Decimal(str(reference_score)) * _REFERENCE_WEIGHT
         + Decimal(str(amount_score)) * _AMOUNT_WEIGHT
         + Decimal(str(date_score)) * _DATE_WEIGHT
@@ -112,6 +112,12 @@ def score_candidate(
         + Decimal(str(direction_score)) * Decimal("0.10")
         + Decimal(str(currency_score)) * Decimal("0.05")
     )
+    # Quantised ONCE, here, so the value the decision is made on is
+    # exactly the value later persisted to match_results.confidence
+    # (NUMERIC(4,3)). Deciding on the unrounded number and storing a
+    # rounded one could violate the auto_matched_requires_high_confidence
+    # check constraint at the 0.85 boundary.
+    confidence = float(raw_confidence.quantize(Decimal("0.001"), rounding=ROUND_HALF_EVEN))
 
     independent_signal_count = sum(
         [

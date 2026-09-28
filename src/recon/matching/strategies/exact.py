@@ -67,8 +67,9 @@ class ExactMatchingStrategy:
             internal_txn = self._disambiguate(bucket, external_txn)
 
             try:
-                internal_claim = self._claims.claim(internal_txn.id, "INTERNAL")
-                external_claim = self._claims.claim(external_txn.id, "EXTERNAL")
+                internal_claim, external_claim = self._claims.claim_pair(
+                    internal_txn.id, external_txn.id
+                )
             except ClaimConflictError:
                 skipped_claim_conflict += 1
                 continue
