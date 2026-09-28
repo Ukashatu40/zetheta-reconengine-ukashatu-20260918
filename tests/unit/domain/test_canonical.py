@@ -48,7 +48,7 @@ def test_valid_canonical_transaction_constructs() -> None:
 
 
 def test_negative_amount_is_rejected() -> None:
-    """AE-05: sign lives on direction, never on amount."""
+    """DD-01: sign lives on direction, never on amount."""
     kwargs = _base_kwargs()
     kwargs["amount"] = Decimal("-100.00")
     with pytest.raises(ValidationError, match="non-negative"):

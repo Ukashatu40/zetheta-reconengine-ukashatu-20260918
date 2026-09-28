@@ -3,7 +3,7 @@
 
 test_ist_2330_does_not_roll_over_to_next_day_in_utc is the direct,
 permanent regression guard against A5.2's own worked example being wrong
-(AE-05) — this is the single most important assertion in this file.
+(AE-33) — this is the single most important assertion in this file.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ def test_simple_date_only_normalisation_assumes_midnight_local() -> None:
 
 
 def test_ist_2330_does_not_roll_over_to_next_day_in_utc() -> None:
-    """AE-05: A5.2's own example claims 11:30 PM IST on 15 March becomes
+    """AE-33: A5.2's own example claims 11:30 PM IST on 15 March becomes
     16 March in UTC+0. It doesn't — 23:30 IST = 18:00 UTC, still the 15th.
     This test pins the arithmetically correct behaviour permanently."""
     result = normalise_timestamp(

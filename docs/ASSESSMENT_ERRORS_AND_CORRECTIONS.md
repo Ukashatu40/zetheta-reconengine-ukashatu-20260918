@@ -1,220 +1,216 @@
-# Assessment Errors and Corrections
+<!-- docs/ASSESSMENT_ERRORS_AND_CORRECTIONS.md -->
 
-This document tracks every deliberate error, contradiction, or
-questionable claim identified in the assessment PDF, per the format the
-PDF itself specifies. Each entry is referenced from the test that
-demonstrates our handling — search the codebase for the entry's ID (e.g.
-`AE-02`) to find it.
+# Assessment Errors, Implementation Bugs and Design Decisions
 
-Entries are added as they're encountered during implementation, not
-front-loaded speculatively — this list will grow through every remaining
-work package.
+Three ID series, so a code comment always resolves to exactly one entry:
 
----
+- **AE-nn**: error or contradiction in the assessment PDF.
+- **IB-nn**: bug in this codebase, with its regression test.
+- **DD-nn**: deliberate scope or design decision.
 
-## AE-01: MT940 counterparty_account cannot be a fixed `:86:` line offset
-
-**PDF says:** A2.4's canonical field table maps `counterparty_account` to
-"`:86:` line 2-3".
-
-**Why it's wrong:** `:86:` is unstructured free text in base MT940. Its
-internal layout is bank-defined — some banks use structured sub-fields,
-some use `/TAG/` conventions, some use nothing at all. A fixed line index
-will silently extract narration fragments as account numbers on any bank
-that doesn't happen to match the assumed layout.
-
-**Correction implemented:** The MT940 parser (`recon.ingestion.parsers.mt940`)
-captures `:86:` content as raw narrative text only. No sub-field
-extraction (counterparty name, account number) happens at the parsing
-stage. Structured extraction, where it's ever needed, is deferred to
-normalisation as a per-bank configurable strategy — never a fixed offset
-in the parser.
-
-**Test:** `test_86_narration_is_captured_raw_without_subfield_extraction`
-(`tests/unit/ingestion/parsers/test_mt940_parser.py`) — asserts
-`"counterparty_name" not in rows[0].mapped` and that the full raw `:86:`
-text, including embedded `/TAG/` conventions, survives unmodified.
+Status is one of Implemented, Planned (not built yet) or Documented only.
+Corrections marked "not independently verified" rest on the PDF's own
+instruction, not on an external source.
 
 ---
 
-## AE-02: CAMT.053 settlement_date must be per-entry, not statement-level
+## AE: PDF errors and contradictions
 
-**PDF says:** A2.4 maps `settlement_date` to
-`Stmt/Bal[Tp/CdOrPrtry/Cd='CLBD']/Dt/Dt` — a statement-level closing
-balance element — then adds a note asking the intern to verify whether
-CLBD or CLAV is the correct balance-type code.
+### AE-01: MT940 counterparty_account is not a fixed `:86:` line offset
 
-**Why it's wrong:** The note is circular (it states the code is CLBD,
-then confirms CLBD is correct for Closing Booked Balance). The real
-error is structural: `Stmt/Bal` is one balance for the _entire
-statement_. Mapping a per-transaction canonical field to it would assign
-the identical date to every transaction in the file, regardless of when
-each individual transaction actually settled.
+- **PDF (A2.4):** `counterparty_account` comes from ":86: line 2-3".
+- **Problem:** `:86:` is free text with a bank-defined layout; a fixed line index extracts narration fragments as account numbers.
+- **Correction:** the parser keeps `:86:` as raw narrative and extracts no counterparty fields. Structured extraction, if ever needed, is a per-bank configurable strategy at normalisation.
+- **Status:** Implemented.
+- **Test:** `test_86_narration_is_captured_raw_without_subfield_extraction`.
 
-**Correction implemented:** `settlement_date` for a transaction is
-sourced from `Ntry/ValDt/Dt` — the per-entry value date — never from the
-statement-level balance. The statement's closing/opening balances are
-captured separately (`CAMT053Balance`, `CAMT053StatementHeader`) for a
-future balance-level reconciliation control (see Case Study C5's
-lesson), not conflated with per-transaction data.
+### AE-02: CAMT.053 settlement_date is per-entry, not the CLBD balance date
 
-**Test:**
-`test_settlement_date_is_per_entry_val_dt_not_statement_balance_date`
-(`tests/unit/ingestion/parsers/camt053/test_parser.py`) — the fixture
-deliberately gives the entry's `BookgDt`, `ValDt`, and the statement's
-`CLBD` balance date three _different_ values, proving `settlement_date`
-tracks `ValDt` specifically and not either of the other two.
+- **PDF (A2.4):** `settlement_date` = `Stmt/Bal[...='CLBD']/Dt/Dt`, plus a circular CLBD/CLAV note.
+- **Problem:** `Stmt/Bal` is one balance for the whole statement, so every transaction would get the same date.
+- **Correction:** use `Ntry/ValDt/Dt`. Statement balances are captured separately for balance-level reconciliation.
+- **Status:** Implemented.
+- **Test:** `test_settlement_date_is_per_entry_val_dt_not_statement_balance_date`.
+
+### AE-03: DIRECTION_REVERSAL SLA of 1 hour
+
+- **PDF (A4.1 #8):** SLA 1 hour. The PDF itself instructs correcting it to 30 minutes with mandatory Compliance escalation.
+- **Reasoning:** a reversed DR/CR indicator is a booking defect or manipulation. Totals can still balance in absolute terms while the net position is wrong by twice the amount, so time to containment is the whole control.
+- **Correction:** 30 minutes, Tier 4, not auto-resolvable. SLA and severity are independent fields (AE-07).
+- **Status:** Planned (exception engine). No test yet.
+
+### AE-04: NPCI rounding attribution and float-drift conflation
+
+- **PDF (C3):** NPCI used "round half up". A later note says this is reversed: NPCI used half-even and member banks were inconsistent. The same paragraph presents `0.1 + 0.2` as an example of banker's rounding.
+- **Problem:** `0.1 + 0.2 != 0.3` is a binary-representation problem that exists before any rounding decision. It is not a rounding-mode problem. The reversal is the PDF's own instruction and is not independently verified.
+- **Correction:** two independent controls. Money is never a float (Decimal and integer minor units), and the rounding mode is an explicit configured parameter defaulting to ROUND_HALF_EVEN.
+- **Status:** Implemented.
+- **Tests:** `test_float_representation_drift_demonstration`, `test_rounding_mode_is_configured_not_default`, `test_sum_of_10000_amounts_is_exact`.
+
+### AE-05: Target breach timeline
+
+- **PDF (C6):** the breach is dated "November-December 2013". The PDF's own note distinguishes malware installation, active theft period and public disclosure. Dates not independently verified.
+- **Consequence for design:** the audit trail must separate event time from recorded time.
+- **Status:** Implemented at schema level (`audit.audit_log` has `occurred_at` and `recorded_at`). No AuditLogger yet.
+
+### AE-06: Blocking window narrower than the scoring window
+
+- **PDF:** Day 3 blocks on "same amount ± tolerance AND date ± 2 days"; A3.4 scores up to T+3; A5.3 gives windows from T+0 to T+5.
+- **Problem:** a conjunctive ±2-day block makes T+3 unreachable, makes split/netted matching impossible (their amounts differ by design), and hard-codes a UPI-shaped window.
+- **Correction:** three independent blocking passes, unioned and deduplicated, with a per-bank configurable window and a capped, flagged candidate list.
+- **Status:** Implemented (split/netted candidate generation not built).
+- **Tests:** `tests/unit/matching/test_candidates.py`.
+
+### AE-07: Severity is defined circularly from SLA
+
+- **PDF (Day 4):** severity derives from SLA, which derives from category, so severity carries no independent information. A ₹50 lakh DATE_MISMATCH would be CRITICAL by value and LOW by SLA.
+- **Correction:** severity = max(category base severity, value-derived severity), computed independently of SLA, on the INR-equivalent amount.
+- **Status:** Planned (enum exists; classifier not built).
+
+### AE-08: Confidence band boundaries are ambiguous
+
+- **PDF (A3.4):** "above 0.85" and "between 0.60 and 0.85" both plausibly include 0.85.
+- **Correction:** `> 0.85` auto-match, `0.60 <= x <= 0.85` review, `< 0.60` no match. Ties go to the safer bucket.
+- **Status:** Implemented.
+- **Tests:** `test_confidence_exactly_at_auto_threshold_goes_to_review_not_auto_match`, `test_confidence_exactly_at_review_threshold_goes_to_review`.
+
+### AE-09: Direction and currency inflate every surviving candidate
+
+- **PDF (A3.4):** direction and currency carry weight 0.15 combined while also being "must match", so they always score 1.0 and add a constant 0.15.
+- **Correction:** both are hard gates checked before scoring. Auto-match additionally requires at least two of {reference, amount, date, counterparty} to clear their own thresholds.
+- **Addendum:** with A3.4's actual weights, the branch `confidence > 0.85 and signals < 2` cannot be reached through `score_candidate()`. The only continuous field that can score without clearing its threshold is reference, and its non-clearing maximum contribution is about 0.32; adding the 0.15 gate total gives roughly 0.47. The rule is kept as defence against future reweighting and is tested directly against `_decide()`.
+- **Status:** Implemented.
+- **Test:** `test_decide_directly_exercises_the_ae09_branch`.
+
+### AE-10: Day 3 writes every score above 0.60 as a match
+
+- **PDF:** Day 3 writes matches above 0.60 to `match_results`; A3.4 routes 0.60 to 0.85 to human review.
+- **Correction:** rows are written but with `status = 'PENDING_REVIEW'`, and excluded from match metrics until confirmed. A check constraint requires `confidence > 0.85` for `AUTO_MATCHED`.
+- **Status:** Implemented. No reviewer workflow exists yet, so PENDING_REVIEW rows are never confirmed or rejected.
+- **Test:** `test_review_band_pair_is_written_pending_review_claimed_but_not_matched`.
+
+### AE-12: The DR/CR enum cannot represent reversals
+
+- **PDF:** A2.1 lists MT940 marks D, C, RD, RC; the A2.4 canonical enum has only DR and CR.
+- **Correction:** keep `Direction` as DR/CR; carry `is_reversal` and `reverses_reference` separately.
+- **Status:** Implemented.
+- **Tests:** `test_reversal_with_reference_is_valid`, `test_reversal_debit_mark_is_recognised`, `test_normalise_direction_recognises_all_format_vocabularies`.
+
+### AE-13: Currency sourced from statement-level `:60F:` conflicts with multi-currency statements
+
+- **Correction:** resolution order entry-level, then statement-level, then bank default. The source is recorded per transaction as `currency_source`.
+- **Status:** Implemented.
+- **Tests:** `test_resolve_currency_*`.
+
+### AE-14: Fixed byte offsets in `:61:` break on bank deviations
+
+- **PDF (A2.4):** `txn_id` is ":61: ref (pos 17-32)".
+- **Problem:** the optional funds code and variable-length amount shift every later position.
+- **Correction:** extract every sub-field with one regex built on character-class transitions. The missing-funds-code deviation then needs no special code.
+- **Status:** Implemented.
+- **Tests:** `test_missing_funds_code_parses_correctly`, `test_parse_field_61_extracts_all_structural_parts`.
+
+### AE-15: `txn_id` is not a unique identifier
+
+- **Problem:** CAMT `EndToEndId` is often `NOTPROVIDED`; MT940 references are bank-scoped and reused.
+- **Correction:** system-generated UUID primary key; `txn_id` is indexed but never unique.
+- **Status:** Implemented structurally. No dedicated test.
+
+### AE-16: The exact-match key is stated two incompatible ways
+
+- **PDF:** A3.1 says reference+amount+currency+date; Day 3 says txn_id+amount+currency+direction.
+- **Correction:** key is (normalised_reference, amount_minor, currency, direction). Date is a secondary disambiguator, not a key part.
+- **Status:** Implemented.
+- **Tests:** `tests/integration/test_exact_matching.py`.
+
+### AE-17: DECIMAL(18,4) ignores per-currency precision
+
+- **Correction:** store NUMERIC(20,4) plus `amount_minor` (BIGINT) and `currency_exponent` from an ISO 4217 table; all comparison and summation runs on integer minor units.
+- **Status:** Implemented.
+- **Tests:** `test_per_currency_exponent`, `test_jpy_quantizes_to_zero_decimal_places`.
+
+### AE-26: PAN masking specified at the wrong layer
+
+- **PDF (A9.3):** mask in the normalisation layer, but Day 1 persists raw data before normalisation, so full PANs would be stored.
+- **Correction:** mask at the ingestion boundary, before any persistence.
+- **Status:** Planned. No PAN guard exists yet.
+
+### AE-31: Timeline stated as 15 days and 7 days
+
+- **PDF:** cover says 15 days, Part D says 7. Interpreted as seven work packages across a 15-day window; documented in README.
+- **Status:** Documented only.
+
+### AE-32: The B4.2 netting figures do not reconcile
+
+- **PDF:** GBP 142,857.14 at 84.00 is ₹1,19,99,999.76 (about ₹1.2 crore), not the stated ₹1,50,00,000. The "0.63%" figure is the difference between two rates (84.00 vs 83.47), not between the two amounts.
+- **Plan:** the golden dataset carries both the corrected case (expected NETTED match) and the as-written case (expected FX_VARIANCE).
+- **Status:** Planned (cross-currency matching).
+
+### AE-33: A5.2's timezone example is arithmetically wrong
+
+- **PDF:** "11:30 PM IST on 15 March will be recorded as 16 March in UTC+0". 23:30 IST is 18:00 UTC on 15 March.
+- **Status:** Implemented.
+- **Tests:** `test_ist_2330_does_not_roll_over_to_next_day_in_utc`, `test_singapore_utc_plus_8_does_roll_over_for_a_late_transaction`.
+
+### AE-34: UPI December 2024 statistics
+
+- **PDF (A1.4):** 14.96 billion transactions worth ₹20.64 lakh crore.
+- **Found by search:** NPCI reported about 16.73 billion transactions and about ₹23.25 lakh crore for December 2024 (newsonair.gov.in report of 2 January 2025). No design consequence.
+- **Status:** Documented only.
+
+### AE-35: Exact-match rate stated as 70-85% and as above 95%
+
+- **PDF:** A3.1 says 70-85% of all records; Day 3 targets above 95% of matchable records.
+- **Plan:** report `exact_match_rate_of_total` and `exact_match_rate_of_matchable` separately; never tune towards the 95% figure (B4.4's warning about inflated match rates).
+- **Status:** Planned. The orchestrator currently returns counts only.
+
+### Other Phase 0 observations, not yet individually numbered
+
+Unverified or lower-impact: the "Section 26A" penalty citation could not be verified; community PostgreSQL has no TDE, so encryption at rest is volume-level; the Paytm deadline was extended from 29 February to 15 March 2024; subset-sum is many-to-one, not many-to-many, so netted matching will be a bounded heuristic.
 
 ---
 
-## AE-03: field extraction must be structural, never a fixed byte offset
+## IB: implementation bugs
 
-**Applies to:** MT940 `:61:` field parsing generally (not a single PDF
-quote, but the pattern AE-01 exemplifies).
+### IB-01: date-only timestamps shifted a day back for positive-UTC banks
 
-**Why it matters:** The `:61:` line packs value date, entry date, D/C
-mark, an _optional_ funds code, amount, transaction type, and reference
-into one line with variable-length sub-fields. A parser that slices by
-fixed character position breaks the instant a bank omits the optional
-funds code (exactly SBI's documented deviation) or uses a
-different-length amount.
+- **What:** midnight IST converts to 18:30 UTC the previous day; using `.utc.date()` as `txn_date` would have moved every Indian transaction back a day.
+- **Fix:** `NormalisedTimestamp.local_date`; `txn_date` and `settlement_date` use it.
+- **Caught:** while designing the pipeline, before persistence.
+- **Tests:** `test_local_date_reflects_source_statement_date_not_utc_shifted_date`, `test_txn_date_uses_local_calendar_date_not_utc_shifted_date`.
 
-**Correction implemented:** `recon.ingestion.parsers.mt940.field_61`
-extracts every sub-field via a single regex built on character-class
-transitions (digits vs. letters vs. the mark alphabet), not offsets. This
-is what let the "missing funds code" deviation (D2's item 1) require
-_zero_ special-case code — its absence is structurally unambiguous from
-the grammar itself, not something that needs detecting.
+### IB-02: check-constraint names doubled, truncated and hash-suffixed (3 occurrences)
 
-**Test:** `test_missing_funds_code_parses_correctly` and
-`test_parse_field_61_extracts_all_structural_parts`
-(`tests/unit/ingestion/parsers/test_mt940_parser.py`).
+- **What:** hand-written migrations passed already-prefixed names; the naming convention added its prefix again; PostgreSQL silently truncated names over 63 bytes.
+- **Fix:** migrations always pass the bare name. `normalised_transactions` needed a rename migration (`3f392c4a49dd`).
+- **Standing rule:** verify constraint names against `\d <table>`, never against the migration source.
+- **Test:** none; a schema-authoring discipline issue.
 
----
+### IB-03: a claim conflict rolled back the whole session, and a half-claimed pair was left behind
 
-## AE-04: exact-match rate is stated two incompatible ways
+- **What:** `ClaimsService.claim()` called `session.rollback()`, discarding earlier uncommitted matches. Separately, an internal claim could succeed while the external claim conflicted, leaving an orphaned ACTIVE claim.
+- **Fix:** savepoint per claim (`begin_nested`); `claim_pair()` claims both sides atomically.
+- **Tests:** `test_failed_claim_does_not_discard_earlier_uncommitted_claims`, `test_claim_pair_conflict_leaves_no_orphaned_claim_on_the_other_side`, `test_two_externals_competing_for_one_internal_only_first_wins_and_keeps_its_match`.
 
-**PDF says:** A3.1 states exact matching "resolves 70-85% of all
-records." Day 3 sets a target of "> 95% of matchable records resolved in
-exact matching phase."
+### IB-04: confidence decided on the unrounded value, stored rounded
 
-**Why it's questionable:** These use different denominators ("all
-records" vs. "matchable records"), but even accounting for that, the
-PDF gives no way to reconcile 70-85% against 95%+ without redefining one
-of the terms.
+- **What:** a raw 0.85004 would be decided AUTO_MATCH and stored as 0.850, violating the `auto_matched_requires_high_confidence` check.
+- **Fix:** quantise to 3 decimals once, before deciding.
+- **Test:** `test_confidence_is_quantised_to_three_decimals_before_deciding`.
 
-**Correction planned (not yet implemented — matching engine is WP4):**
-Report both metrics separately and explicitly —
-`exact_match_rate_of_total` and `exact_match_rate_of_matchable`, where
-"matchable" means a record that ultimately received _any_ match by the
-end of the full pipeline. The engine will not be tuned toward the 95%
-figure specifically; doing so risks the exact failure mode Scenario B4.4
-warns against (a high match rate achieved by inflating false positives).
+### IB-05: exact matching can reuse an already-claimed candidate (OPEN, not fixed)
 
-**Status:** Documented ahead of implementation since the decision affects
-matching-engine design from the start; no test yet, as no matching code
-exists yet.
+- **What:** found by reading, not by a failing test. `_disambiguate` picks from the whole hash bucket, including internals already matched earlier in the same run. With two externals and two internals sharing one key, the second external can pick the same internal, hit a claim conflict and be skipped even though a free internal exists.
+- **Impact:** a valid pair is missed at the exact level (fuzzy may recover it). It is not a false match.
+- **Plan:** write the failing test first, then remove claimed candidates from the bucket.
 
 ---
 
-## Format-level scope decisions (not PDF errors, but decisions worth recording)
+## DD: design and scope decisions
 
-These aren't corrections of something the PDF got wrong — they're
-implementation choices made where the PDF was silent or where full
-compliance was judged not worth the cost yet. Recorded here so they're
-visible rather than discovered by a reviewer reading code.
-
-- **R29 (CAMT.053 XSD validation) is not implemented.** Full validation
-  against the ISO 20022 `camt.053.001.08` XSD requires vendoring a
-  multi-file schema with external imports, or fetching it at parse time
-  (a real XXE-adjacent risk and a hard runtime dependency on network
-  availability). Structural validation — root element namespace/name
-  check, required child elements — is implemented instead
-  (`CAMT053Parser.parse_with_header`'s root-element check). Full XSD
-  validation remains an open gap.
-
-- **Multi-currency `:61:` lines are out of scope.** Base MT940 does not
-  carry a currency code per statement line; a bank whose export embeds
-  one there is not currently supported. None of the sample bank
-  configs require it. If encountered, the statement's `:60F:`/`:60M:`
-  currency (already extracted via `MT940Balance`) is the available
-  fallback.
-
-- **A standalone `:86:` field with no preceding `:61:`** (account-level
-  narrative rather than per-transaction) is lexed correctly by
-  `recon.ingestion.parsers.mt940.lexer` but is currently dropped rather
-  than attached to any row or persisted. None of the current sample
-  data requires it.
-
----
-
-## AE-05: date-only timestamps silently shift backward a calendar day for positive-UTC-offset banks
-
-**Not a PDF error** — this is a bug introduced in this codebase's own WP3 Increment 1, caught and fixed in Increment 3 before it reached persisted data. Recorded here because it's exactly the class of defect A5.2 warns about, and because the fix shapes how `txn_date`/`settlement_date` are derived everywhere in the normalisation pipeline.
-
-**What happened:** `normalise_timestamp` converted a date-only value (no time component) to UTC by assuming midnight in the bank's local timezone, then returning that UTC instant. For any bank in a positive UTC-offset zone — every Indian bank, UTC+5:30 — midnight IST converts to 18:30 UTC on the _previous_ calendar day. Using `.utc.date()` as the canonical `txn_date` would therefore have made every transaction from every Indian bank appear one day earlier than the date printed on the actual bank statement.
-
-**Why it wasn't caught sooner:** the individual `normalise_timestamp` unit tests passed — they correctly asserted the (accurate) UTC-shifted date, since that's genuinely what midnight IST converts to. The bug was only visible one layer up, in how a _caller_ would use that result. It surfaced while designing `NormalisationPipeline` (Increment 3), before any caller actually shipped with the bug — not from a failing test.
-
-**Correction implemented:** `NormalisedTimestamp` gained a second field, `local_date` — the calendar date exactly as parsed, before any UTC conversion. `NormalisationPipeline` uses `local_date` for `txn_date` and `settlement_date`; `.utc` is preserved separately for anything that genuinely needs the precise instant (audit timestamps, ordering).
-
-**Test:** `test_local_date_reflects_source_statement_date_not_utc_shifted_date` (`tests/unit/normalisation/test_timestamps.py`) and `test_txn_date_uses_local_calendar_date_not_utc_shifted_date` (`tests/unit/normalisation/test_pipeline.py`) — both pin the correct behaviour permanently, one at the timestamp-utility level and one at the pipeline level, so a future regression at either layer is caught.
-
-**Broader lesson recorded for later work:** this is the general hazard A5.2 was gesturing at with its (arithmetically wrong) worked example — timezone conversion is easy to get subtly backwards, and a naive implementation frequently agrees with itself in isolated tests while still being wrong for the caller's actual purpose. Worth remembering when WP4's date-offset matching rule and WP6's reporting layer consume these fields.
-
----
-
-## AE-06: check-constraint names silently corrupted by Postgres identifier truncation (recurring pattern, 3 occurrences)
-
-**Not a PDF error** — an implementation bug pattern in this codebase's own migrations, occurring three times before the root cause was addressed structurally. Recorded because it's a real risk to any future migration author on this project, not just a historical footnote.
-
-**What happened:** `recon.persistence.models.base.Base`'s `NAMING_CONVENTION` (`ck_%(table_name)s_%(constraint_name)s`) automatically prefixes a bare constraint name with `ck_<table>_` when SQLAlchemy's ORM builds the constraint. Hand-written Alembic migrations construct `sa.CheckConstraint` objects directly, bypassing that convention machinery entirely — so a migration author who copies the ORM model's _already-prefixed_ name (e.g. `"ck_ingestion_files_status_valid"`) into the migration produces a **doubly-prefixed** name. PostgreSQL silently truncates any identifier over 63 bytes and appends a hash to disambiguate, so the doubled prefix doesn't error — it just becomes an unreadable, hash-suffixed name that nobody would think to query for.
-
-**Occurrences:**
-
-1. `ingestion_files` and `raw_transactions` (WP1 Increment 4) — caught and fixed before either table was ever queried in anger, via a full `docker compose down -v` and clean re-migration since nothing had been committed yet.
-2. `normalised_transactions` (WP3 Increment 4) — caught only _after_ the migration had already run against both the dev and test databases, requiring a follow-up `ALTER TABLE ... RENAME CONSTRAINT` migration (`3f392c4a49dd`) rather than a clean re-migration, since dropping and recreating would have discarded partition structure unnecessarily.
-
-**Correction implemented:** the rule going forward — a migration's `sa.CheckConstraint(name=...)` argument is always the **bare** name (`"status_valid"`, never `"ck_ingestion_files_status_valid"`), exactly matching what the ORM model itself declares. This is now stated explicitly in this document specifically so a future migration (WP4 onward) doesn't reintroduce it a fourth time.
-
-**Test:** none directly — this is a schema-authoring discipline issue rather than something a unit test naturally catches (a passing test doesn't know a constraint's real name is different from its intended one). The mitigation is procedural: any new migration's constraint names are checked against `\d <table>` output before being considered done, not assumed correct from the migration source alone.
-
-**Broader lesson:** "the migration ran without error" is not evidence a migration did what was intended — PostgreSQL's identifier truncation is a silent-failure mode by design, and the fix is to always verify against the database's own `\d` output, never against the SQL that was submitted to it.
-
----
-
-## AE-09 addendum: the minimum-evidence rule's trigger condition is currently unreachable
-
-Recorded during WP4 Increment 4 test-writing, not a new PDF error — a
-follow-up finding on AE-09 (Phase 0 report Section 5.2, item C9).
-
-**What was found:** working through the actual arithmetic of A3.4's
-weights (reference 0.35, amount 0.25, date 0.15, counterparty 0.10,
-direction+currency gates fixed at 0.15 combined), a real transaction pair
-cannot exceed 0.85 confidence while fewer than two of
-{reference, amount, date, counterparty} individually clear their own
-field-level threshold. The only field offering continuous (non-binary)
-partial credit without necessarily clearing its threshold is reference,
-via Jaro-Winkler similarity — and its maximum non-clearing contribution
-(just under the 0.92 threshold) is 0.35 x 0.92 ~= 0.32, which combined
-with the 0.15 gate total (0.47) falls far short of 0.85.
-
-**Consequence:** `recon.matching.scoring.weighted._decide`'s AE-09 branch
-(`confidence > 0.85 and independent_signal_count < 2` -> REVIEW instead
-of AUTO_MATCH) is real, correct, defensible code, but is not currently
-reachable through `score_candidate()` with real transaction data under
-A3.4's stated weights. It is tested directly against `_decide()` with
-synthetic arguments (`tests/unit/matching/test_weighted.py::test_decide_directly_exercises_the_ae09_branch`)
-rather than through a realistic transaction pair, since no such pair
-exists under these weights.
-
-**Why the rule is kept anyway:** it is inexpensive defense-in-depth
-against a future change (a reweighting, or an additional continuously-
-scored field) that could make the scenario reachable. Removing it would
-save nothing and would remove a safety net for exactly the kind of
-change this codebase should be robust to.
-
-**Test:** `test_decide_directly_exercises_the_ae09_branch` (direct), plus
-`test_reference_and_amount_clearing_with_no_date_or_counterparty_is_reviewed_not_matched`
-(an AE-08 half-open-band case that was originally miswritten as an AE-09
-case before the arithmetic was checked properly).
+- **DD-01: sign lives on `direction`, never on `amount`.** The parser captures a negative amount as text; `CanonicalTransaction` rejects it. Parsing and normalising stay separate stages.
+- **DD-02: PDF requirement R29 (CAMT.053 XSD validation) is not implemented.** Structural checks (namespace, root element, `Stmt` present) are used instead. Vendoring the schema, or fetching it at parse time, was judged not worth the cost or the XXE-adjacent risk.
+- **DD-03: multi-currency `:61:` lines are out of scope.** Base MT940 carries no per-line currency.
+- **DD-04: a standalone `:86:` with no preceding `:61:` is lexed and then dropped.**
+- **DD-05: no phonetic or transliteration matching.** Soundex fits English poorly and RapidFuzz ships no phonetic algorithms; name variance is left to Token Set Ratio.
+- **DD-06: reference truncate and pad are opt-in only.** Silent truncation would make REFERENCE_TRUNCATED undetectable for references we shortened ourselves.

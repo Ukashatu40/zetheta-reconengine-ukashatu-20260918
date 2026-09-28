@@ -98,35 +98,6 @@ def test_quarantined_rows_are_excluded_from_normalisation(
     assert len(rows) == 1
 
 
-def test_normalisation_failure_is_captured_not_raised(db_session: Session, tmp_path: Path) -> None:
-    """A row that parses successfully (PARSED status) but fails
-    normalisation for a reason the parser couldn't have caught — here, a
-    currency not registered in recon.domain.money's exponent table."""
-    config = load_bank_config(_HDFC_CONFIG_PATH)
-    csv_path = tmp_path / "hdfc_bad_currency.csv"
-    # HDFC's csv parser has no currency column at all — currency always
-    # resolves to the bank default (INR) via resolve_currency's fallback,
-    # so to exercise a genuine pipeline-level failure here we instead
-    # target something the CSV parser's OWN validation doesn't check:
-    # an amount using a decimal separator the bank config doesn't expect,
-    # producing text that becomes unparseable only after normalisation's
-    # separator substitution runs.
-    csv_path.write_text(
-        f"{_HEADER}\n" "REF001,15-03-2026,1;500.00,CR,Acme Corp,Note\n",
-        encoding="utf-8",
-    )
-
-    ingestion = IngestionService(db_session, ingested_by="test-suite")
-    ingest_result = ingestion.ingest_file(csv_path, config, "CSV")
-    db_session.flush()
-    # This amount text ("1;500.00") is not flagged as INVALID_AMOUNT by
-    # the CSV parser's own Decimal-parse check, since Decimal("1;500.00")
-    # legitimately fails there too -- meaning it would already be
-    # QUARANTINED, not PARSED. This test as constructed cannot actually
-    # isolate a pipeline-only failure with HDFC's config; see note below.
-    assert ingest_result.error_count == 1
-
-
 def test_reconstructed_parsed_row_matches_original_mapped_fields(
     db_session: Session, tmp_path: Path
 ) -> None:
