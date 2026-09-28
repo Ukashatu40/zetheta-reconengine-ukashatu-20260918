@@ -198,11 +198,12 @@ Unverified or lower-impact: the "Section 26A" penalty citation could not be veri
 - **Fix:** quantise to 3 decimals once, before deciding.
 - **Test:** `test_confidence_is_quantised_to_three_decimals_before_deciding`.
 
-### IB-05: exact matching can reuse an already-claimed candidate (OPEN, not fixed)
+### IB-05: exact matching reused an already-matched candidate (fixed)
 
 - **What:** found by reading, not by a failing test. `_disambiguate` picks from the whole hash bucket, including internals already matched earlier in the same run. With two externals and two internals sharing one key, the second external can pick the same internal, hit a claim conflict and be skipped even though a free internal exists.
 - **Impact:** a valid pair is missed at the exact level (fuzzy may recover it). It is not a false match.
-- **Plan:** write the failing test first, then remove claimed candidates from the bucket.
+- **Fix:** the matched internal is removed from its hash bucket after a successful match.
+- **Test:** `test_second_external_uses_a_free_internal_instead_of_reusing_a_matched_one`.
 
 ---
 

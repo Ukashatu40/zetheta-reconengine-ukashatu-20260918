@@ -9,7 +9,7 @@ shape. See recon.persistence.models.match_results.MatchResult's module
 docstring for field-by-field reasoning.
 
 Constraint names are bare, verified against \\d output after applying —
-per AE-06 (docs/ASSESSMENT_ERRORS_AND_CORRECTIONS.md).
+per IB-02 (docs/ASSESSMENT_ERRORS_AND_CORRECTIONS.md).
 """
 
 from __future__ import annotations
