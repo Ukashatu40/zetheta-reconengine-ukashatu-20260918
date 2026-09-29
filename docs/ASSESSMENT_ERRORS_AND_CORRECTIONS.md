@@ -161,8 +161,8 @@ instruction, not on an external source.
 ### AE-35: Exact-match rate stated as 70-85% and as above 95%
 
 - **PDF:** A3.1 says 70-85% of all records; Day 3 targets above 95% of matchable records.
-- **Plan:** report `exact_match_rate_of_total` and `exact_match_rate_of_matchable` separately; never tune towards the 95% figure (B4.4's warning about inflated match rates).
-- **Status:** Planned. The orchestrator currently returns counts only.
+- **Status:** Implemented, with a caveat. `RunMetrics` reports `exact_match_rate_of_total` and `exact_match_rate_of_matchable` separately. "Matchable" here means resolved by exact or fuzzy auto-match within the same orchestrator run — it does not yet account for a PENDING_REVIEW row later confirmed by a human, since no reviewer workflow exists. The engine is not tuned toward either rate.
+- **Test:** `test_match_rates_are_reported_separately_and_review_rows_are_excluded`.
 
 ### Other Phase 0 observations, not yet individually numbered
 

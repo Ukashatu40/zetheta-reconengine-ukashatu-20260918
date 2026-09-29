@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
-TOLERANCE = 1e-9
+WEIGHTS_SUM_TOLERANCE = 1e-9
 
 
 class MatchingWeights(BaseModel):
@@ -33,7 +33,7 @@ class MatchingWeights(BaseModel):
             + self.direction
             + self.currency
         )
-        if abs(total - 1.0) > TOLERANCE:
+        if abs(total - 1.0) > WEIGHTS_SUM_TOLERANCE:
             raise ValueError(f"weights must sum to 1.0, got {total}")
         return self
 

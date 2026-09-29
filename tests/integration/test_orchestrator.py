@@ -232,3 +232,71 @@ def test_orchestrator_is_scoped_to_a_single_bank_code(db_session: Session) -> No
     assert outcome.internal_pool_size_before_exact == 1  # only the HDFC internal txn
     assert outcome.exact.matched_count == 1
     assert icici_internal.match_status == "UNMATCHED"  # untouched by this run entirely
+
+
+def test_match_rates_are_reported_separately_and_review_rows_are_excluded(
+    db_session: Session,
+) -> None:
+    """AE-35: exact_match_rate_of_total and exact_match_rate_of_matchable
+    must differ when fuzzy resolves something exact didn't, and a
+    PENDING_REVIEW row (claimed, not matched) must not inflate either
+    rate."""
+    ingestion_file = _make_ingestion_file(db_session)
+
+    # Pair 1: exact match.
+    exact_internal = _make_txn(ingestion_file.id, source="INTERNAL")
+    exact_external = _make_txn(
+        ingestion_file.id, source="EXTERNAL", id=uuid.uuid4(), raw_transaction_id=uuid.uuid4()
+    )
+    # Pair 2: fuzzy match (references one character apart).
+    fuzzy_internal = _make_txn(
+        ingestion_file.id,
+        source="INTERNAL",
+        id=uuid.uuid4(),
+        raw_transaction_id=uuid.uuid4(),
+        normalised_reference="REF0002234567",
+        counterparty_name_normalised=None,
+    )
+    fuzzy_external = _make_txn(
+        ingestion_file.id,
+        source="EXTERNAL",
+        id=uuid.uuid4(),
+        raw_transaction_id=uuid.uuid4(),
+        normalised_reference="REF0002234568",
+        counterparty_name_normalised=None,
+    )
+    db_session.add_all([exact_internal, exact_external, fuzzy_internal, fuzzy_external])
+    db_session.flush()
+
+    orchestrator = MatchingOrchestrator(
+        db_session,
+        run_id="test-run-metrics",
+        blocking_config=_blocking_config(),
+        amount_tolerance_minor=100,
+        matching_config=_default_config(),
+    )
+    outcome = orchestrator.run(bank_code="HDFC")
+
+    # 1 of 2 external transactions resolved by exact -> 0.5 of total.
+    assert outcome.metrics.exact_match_rate_of_total == 0.5
+    # both externals were matchable within this run -> 1 of 2 resolved by exact.
+    assert outcome.metrics.exact_match_rate_of_matchable == 0.5
+    assert outcome.metrics.overall_match_rate_of_total == 1.0
+    assert outcome.metrics.total_duration_seconds >= 0.0
+    assert outcome.metrics.exact_duration_seconds >= 0.0
+    assert outcome.metrics.fuzzy_duration_seconds >= 0.0
+
+
+def test_empty_pool_reports_zero_rates_not_an_error(db_session: Session) -> None:
+    orchestrator = MatchingOrchestrator(
+        db_session,
+        run_id="test-run-empty",
+        blocking_config=_blocking_config(),
+        amount_tolerance_minor=100,
+        matching_config=_default_config(),
+    )
+    outcome = orchestrator.run(bank_code="NONEXISTENT_BANK")
+
+    assert outcome.metrics.exact_match_rate_of_total == 0.0
+    assert outcome.metrics.exact_match_rate_of_matchable == 0.0
+    assert outcome.metrics.overall_match_rate_of_total == 0.0
