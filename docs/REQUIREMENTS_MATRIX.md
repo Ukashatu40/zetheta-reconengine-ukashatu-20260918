@@ -76,6 +76,7 @@ MISSING — they'll be added as each WP begins.
 | A6.1  | 500k exact matches under 10 s                                                       | none                                                                            | none                                                                      | MISSING: never measured                                                                            |
 | AE-10 | Review-band rows written as PENDING_REVIEW                                          | `match_results` check constraint                                                | `test_review_band_pair_is_written_pending_review_claimed_but_not_matched` | PARTIAL: no reviewer workflow to confirm or reject                                                 |
 | —     | Rule-based (tolerance, date offset, fee, truncation), split, netted, cross-currency | none                                                                            | none                                                                      | MISSING                                                                                            |
+| R52   | Rule engine as ordered Rule objects, not if/elif                                    | `matching/rules/base.py`: `Rule` protocol, `RuleRegistry`                       | `tests/unit/matching/test_rules_base.py`                                  | PARTIAL: abstraction only, no concrete rule yet                                                    |
 
 ## Not yet started
 
