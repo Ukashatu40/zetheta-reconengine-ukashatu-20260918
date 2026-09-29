@@ -14,8 +14,27 @@ import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
+from recon.config.matching_models import MatchingConfig, MatchingThresholds, MatchingWeights
 from recon.matching.scoring.weighted import MatchDecision, _decide, score_candidate
 from recon.persistence.models import NormalisedTransaction
+
+
+def _default_config() -> MatchingConfig:
+    return MatchingConfig(
+        config_version="weights.v1",
+        weights=MatchingWeights(
+            reference=0.35, amount=0.25, date=0.15, counterparty=0.10, direction=0.10, currency=0.05
+        ),
+        thresholds=MatchingThresholds(
+            reference_jaro_winkler=0.92,
+            reference_levenshtein_max_distance=2,
+            reference_levenshtein_min_length=12,
+            counterparty_token_set_ratio=0.80,
+            auto_match_confidence=0.85,
+            review_confidence=0.60,
+            min_independent_signals_for_auto_match=2,
+        ),
+    )
 
 
 def _txn(**overrides: object) -> NormalisedTransaction:
@@ -65,7 +84,9 @@ def test_reference_and_amount_clearing_with_no_date_or_counterparty_is_reviewed_
         txn_date=date(2026, 3, 20),
     )
 
-    scored = score_candidate(internal, external, amount_tolerance_minor=100)
+    scored = score_candidate(
+        internal, external, amount_tolerance_minor=100, config=_default_config()
+    )
 
     assert 0.60 <= scored.confidence <= 0.85
     assert scored.decision == MatchDecision.REVIEW
@@ -84,7 +105,9 @@ def test_mid_range_confidence_is_routed_to_review() -> None:
         txn_date=date(2026, 3, 15),
     )
 
-    scored = score_candidate(internal, external, amount_tolerance_minor=100)
+    scored = score_candidate(
+        internal, external, amount_tolerance_minor=100, config=_default_config()
+    )
 
     assert scored.confidence == 0.55
     assert scored.decision == MatchDecision.NO_MATCH
@@ -110,7 +133,10 @@ def test_decide_directly_exercises_the_ae09_branch() -> None:
     """
 
     decision, rationale = _decide(
-        confidence=0.90, hard_constraints_passed=True, independent_signal_count=1
+        confidence=0.90,
+        hard_constraints_passed=True,
+        independent_signal_count=1,
+        thresholds=_default_config().thresholds,
     )
 
     assert decision == MatchDecision.REVIEW
@@ -123,7 +149,9 @@ def test_identical_transactions_auto_match_with_full_evidence() -> None:
         id=uuid.uuid4(), source="EXTERNAL", counterparty_name_normalised="ACME CORPORATION"
     )
 
-    scored = score_candidate(internal, external, amount_tolerance_minor=100)
+    scored = score_candidate(
+        internal, external, amount_tolerance_minor=100, config=_default_config()
+    )
 
     assert scored.decision == MatchDecision.AUTO_MATCH
     assert scored.confidence > 0.85
@@ -142,7 +170,9 @@ def test_high_confidence_with_only_gates_and_two_weak_signals_is_routed_to_revie
     internal = _txn()
     external = _txn(id=uuid.uuid4(), source="EXTERNAL")
 
-    scored = score_candidate(internal, external, amount_tolerance_minor=100)
+    scored = score_candidate(
+        internal, external, amount_tolerance_minor=100, config=_default_config()
+    )
 
     # With reference, amount, AND date all clearing (3 signals), this
     # legitimately auto-matches — the test name above is corrected below.
@@ -165,7 +195,9 @@ def test_only_reference_clears_threshold_others_fail_routes_to_review() -> None:
         txn_date=date(2026, 4, 15),
     )
 
-    scored = score_candidate(internal, external, amount_tolerance_minor=100)
+    scored = score_candidate(
+        internal, external, amount_tolerance_minor=100, config=_default_config()
+    )
 
     assert scored.independent_signal_count == 1
     assert scored.decision == MatchDecision.NO_MATCH
@@ -175,7 +207,9 @@ def test_hard_constraint_failure_forces_no_match_regardless_of_other_scores() ->
     internal = _txn(direction="CR")
     external = _txn(id=uuid.uuid4(), source="EXTERNAL", direction="DR")
 
-    scored = score_candidate(internal, external, amount_tolerance_minor=100)
+    scored = score_candidate(
+        internal, external, amount_tolerance_minor=100, config=_default_config()
+    )
 
     assert scored.hard_constraints_passed is False
     assert scored.decision == MatchDecision.NO_MATCH
@@ -189,7 +223,9 @@ def test_low_confidence_is_no_match() -> None:
     )
     external = _txn(id=uuid.uuid4(), source="EXTERNAL")
 
-    scored = score_candidate(internal, external, amount_tolerance_minor=100)
+    scored = score_candidate(
+        internal, external, amount_tolerance_minor=100, config=_default_config()
+    )
 
     assert scored.confidence < 0.60
     assert scored.decision == MatchDecision.NO_MATCH
@@ -197,13 +233,23 @@ def test_low_confidence_is_no_match() -> None:
 
 def test_confidence_exactly_at_auto_threshold_goes_to_review_not_auto_match() -> None:
     """AE-08: a tie at 0.85 resolves to the safer bucket."""
-    decision, _ = _decide(confidence=0.85, hard_constraints_passed=True, independent_signal_count=3)
+    decision, _ = _decide(
+        confidence=0.85,
+        hard_constraints_passed=True,
+        independent_signal_count=3,
+        thresholds=_default_config().thresholds,
+    )
     assert decision == MatchDecision.REVIEW
 
 
 def test_confidence_exactly_at_review_threshold_goes_to_review() -> None:
     """AE-08: 0.60 is inside the review band, not below it."""
-    decision, _ = _decide(confidence=0.60, hard_constraints_passed=True, independent_signal_count=3)
+    decision, _ = _decide(
+        confidence=0.60,
+        hard_constraints_passed=True,
+        independent_signal_count=3,
+        thresholds=_default_config().thresholds,
+    )
     assert decision == MatchDecision.REVIEW
 
 
@@ -213,6 +259,39 @@ def test_confidence_is_quantised_to_three_decimals_before_deciding() -> None:
     internal = _txn(normalised_reference="REF0001234567")
     external = _txn(id=uuid.uuid4(), source="EXTERNAL", normalised_reference="REF0001234568")
 
-    scored = score_candidate(internal, external, amount_tolerance_minor=100)
+    scored = score_candidate(
+        internal, external, amount_tolerance_minor=100, config=_default_config()
+    )
 
     assert scored.confidence == round(scored.confidence, 3)
+
+
+def test_a_looser_review_threshold_changes_the_decision() -> None:
+    """Proves config values actually affect the decision, not just that
+    they're accepted as parameters."""
+    internal = _txn(normalised_reference="COMPLETELYDIFFERENT")
+    external = _txn(id=uuid.uuid4(), source="EXTERNAL")
+
+    default_result = score_candidate(
+        internal, external, amount_tolerance_minor=100, config=_default_config()
+    )
+    assert default_result.decision == MatchDecision.NO_MATCH
+
+    loose_config = MatchingConfig(
+        config_version="weights.v2-test",
+        weights=_default_config().weights,
+        thresholds=MatchingThresholds(
+            reference_jaro_winkler=0.92,
+            reference_levenshtein_max_distance=2,
+            reference_levenshtein_min_length=12,
+            counterparty_token_set_ratio=0.80,
+            auto_match_confidence=0.85,
+            review_confidence=0.30,  # loosened from 0.60
+            min_independent_signals_for_auto_match=2,
+        ),
+    )
+    loose_result = score_candidate(
+        internal, external, amount_tolerance_minor=100, config=loose_config
+    )
+    assert loose_result.decision == MatchDecision.REVIEW
+    assert loose_result.weights_version == "weights.v2-test"

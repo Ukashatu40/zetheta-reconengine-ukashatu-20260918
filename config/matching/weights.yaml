@@ -1,0 +1,17 @@
+# config/matching/weights.yaml
+config_version: weights.v1
+weights:
+  reference: 0.35
+  amount: 0.25
+  date: 0.15
+  counterparty: 0.10
+  direction: 0.10
+  currency: 0.05
+thresholds:
+  reference_jaro_winkler: 0.92
+  reference_levenshtein_max_distance: 2
+  reference_levenshtein_min_length: 12
+  counterparty_token_set_ratio: 0.80
+  auto_match_confidence: 0.85
+  review_confidence: 0.60
+  min_independent_signals_for_auto_match: 2

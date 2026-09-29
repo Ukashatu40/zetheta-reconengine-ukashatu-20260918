@@ -29,6 +29,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
+from recon.config.matching_models import MatchingConfig
 from recon.matching.blocking.candidates import BlockingConfig
 from recon.matching.strategies.exact import ExactMatchingStrategy, ExactMatchOutcome
 from recon.matching.strategies.fuzzy import FuzzyMatchingStrategy, FuzzyMatchOutcome
@@ -65,12 +66,14 @@ class MatchingOrchestrator:
         run_id: str,
         blocking_config: BlockingConfig,
         amount_tolerance_minor: int,
+        matching_config: MatchingConfig,
     ) -> None:
         self._session = session
         self._run_id = run_id
         self._repository = MatchingRepository(session)
         self._blocking_config = blocking_config
         self._amount_tolerance_minor = amount_tolerance_minor
+        self._matching_config = matching_config
 
     def run(self, bank_code: str) -> OrchestratorOutcome:
         internal_before_exact = self._repository.find_unmatched(bank_code, "INTERNAL")
@@ -90,6 +93,7 @@ class MatchingOrchestrator:
             self._run_id,
             self._blocking_config,
             self._amount_tolerance_minor,
+            self._matching_config,
         )
         fuzzy_outcome = fuzzy_strategy.run(internal_before_fuzzy, external_before_fuzzy)
 

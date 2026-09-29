@@ -10,10 +10,29 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
+from recon.config.matching_models import MatchingConfig, MatchingThresholds, MatchingWeights
 from recon.matching.blocking.candidates import BlockingConfig
 from recon.matching.strategies.fuzzy import FuzzyMatchingStrategy
 from recon.persistence.models import MatchClaim, MatchResult, NormalisedTransaction
 from tests.integration.factories import make_ingestion_file, make_txn
+
+
+def _default_config() -> MatchingConfig:
+    return MatchingConfig(
+        config_version="weights.v1",
+        weights=MatchingWeights(
+            reference=0.35, amount=0.25, date=0.15, counterparty=0.10, direction=0.10, currency=0.05
+        ),
+        thresholds=MatchingThresholds(
+            reference_jaro_winkler=0.92,
+            reference_levenshtein_max_distance=2,
+            reference_levenshtein_min_length=12,
+            counterparty_token_set_ratio=0.80,
+            auto_match_confidence=0.85,
+            review_confidence=0.60,
+            min_independent_signals_for_auto_match=2,
+        ),
+    )
 
 
 def _strategy(session: Session, run_id: str) -> FuzzyMatchingStrategy:
@@ -22,6 +41,7 @@ def _strategy(session: Session, run_id: str) -> FuzzyMatchingStrategy:
         run_id,
         BlockingConfig(amount_bucket_width_minor=10_000, date_window_days=2),
         amount_tolerance_minor=100,
+        matching_config=_default_config(),
     )
 
 

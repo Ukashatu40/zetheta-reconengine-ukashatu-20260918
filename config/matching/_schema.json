@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Matching configuration",
+  "type": "object",
+  "required": ["config_version", "weights", "thresholds"],
+  "properties": {
+    "config_version": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+\\.v[0-9]+$"
+    },
+    "weights": {
+      "type": "object",
+      "required": [
+        "reference",
+        "amount",
+        "date",
+        "counterparty",
+        "direction",
+        "currency"
+      ],
+      "properties": {
+        "reference": { "type": "number", "minimum": 0, "maximum": 1 },
+        "amount": { "type": "number", "minimum": 0, "maximum": 1 },
+        "date": { "type": "number", "minimum": 0, "maximum": 1 },
+        "counterparty": { "type": "number", "minimum": 0, "maximum": 1 },
+        "direction": { "type": "number", "minimum": 0, "maximum": 1 },
+        "currency": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "thresholds": {
+      "type": "object",
+      "required": [
+        "reference_jaro_winkler",
+        "reference_levenshtein_max_distance",
+        "reference_levenshtein_min_length",
+        "counterparty_token_set_ratio",
+        "auto_match_confidence",
+        "review_confidence",
+        "min_independent_signals_for_auto_match"
+      ],
+      "properties": {
+        "reference_jaro_winkler": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "reference_levenshtein_max_distance": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reference_levenshtein_min_length": { "type": "integer", "minimum": 1 },
+        "counterparty_token_set_ratio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "auto_match_confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "review_confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "min_independent_signals_for_auto_match": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
