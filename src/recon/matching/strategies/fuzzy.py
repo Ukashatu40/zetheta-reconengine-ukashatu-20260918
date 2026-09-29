@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 
 from sqlalchemy.orm import Session
 
+from recon.config.matching_models import MatchingConfig
 from recon.matching.blocking.candidates import BlockingConfig, CandidateGenerator
 from recon.matching.claims import ClaimConflictError, ClaimsService
 from recon.matching.scoring.weighted import MatchDecision, ScoredCandidate, score_candidate
@@ -41,11 +42,13 @@ class FuzzyMatchingStrategy:
         run_id: str,
         blocking_config: BlockingConfig,
         amount_tolerance_minor: int,
+        matching_config: MatchingConfig,
     ) -> None:
         self._session = session
         self._run_id = run_id
         self._blocking_config = blocking_config
         self._amount_tolerance_minor = amount_tolerance_minor
+        self._matching_config = matching_config
         self._claims = ClaimsService(session)
 
     def run(
@@ -111,7 +114,10 @@ class FuzzyMatchingStrategy:
     ) -> ScoredCandidate | None:
         scored = [
             score_candidate(
-                internal_txn, external_txn, amount_tolerance_minor=self._amount_tolerance_minor
+                internal_txn,
+                external_txn,
+                amount_tolerance_minor=self._amount_tolerance_minor,
+                config=self._matching_config,
             )
             for internal_txn in candidates
         ]
@@ -130,6 +136,7 @@ class FuzzyMatchingStrategy:
             internal_transaction_id=scored.internal_txn.id,
             external_transaction_id=scored.external_txn.id,
             field_scores=scored.field_scores,
+            weights_version=scored.weights_version,
             matched_fields={
                 "normalised_reference": scored.internal_txn.normalised_reference,
                 "amount_minor": scored.internal_txn.amount_minor,

@@ -142,6 +142,7 @@ class ExactMatchingStrategy:
             confidence=1.0,
             internal_transaction_id=internal_txn.id,
             external_transaction_id=external_txn.id,
+            weights_version=None,
             field_scores={
                 "reference": 1.0,
                 "amount": 1.0,

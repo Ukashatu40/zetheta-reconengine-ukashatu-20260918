@@ -39,6 +39,7 @@ class MatchResult(Base):
     match_type: Mapped[str] = mapped_column(String(20), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     confidence: Mapped[Decimal] = mapped_column(Numeric(4, 3), nullable=False)
+    weights_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     internal_transaction_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True), nullable=False

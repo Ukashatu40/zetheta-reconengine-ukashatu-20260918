@@ -18,9 +18,28 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
+from recon.config.matching_models import MatchingConfig, MatchingThresholds, MatchingWeights
 from recon.matching.blocking.candidates import BlockingConfig
 from recon.matching.orchestrator import MatchingOrchestrator
 from recon.persistence.models import IngestionFile, MatchResult, NormalisedTransaction
+
+
+def _default_config() -> MatchingConfig:
+    return MatchingConfig(
+        config_version="weights.v1",
+        weights=MatchingWeights(
+            reference=0.35, amount=0.25, date=0.15, counterparty=0.10, direction=0.10, currency=0.05
+        ),
+        thresholds=MatchingThresholds(
+            reference_jaro_winkler=0.92,
+            reference_levenshtein_max_distance=2,
+            reference_levenshtein_min_length=12,
+            counterparty_token_set_ratio=0.80,
+            auto_match_confidence=0.85,
+            review_confidence=0.60,
+            min_independent_signals_for_auto_match=2,
+        ),
+    )
 
 
 def _make_ingestion_file(session: Session, **overrides: object) -> IngestionFile:
@@ -89,6 +108,7 @@ def test_exact_match_is_found_first_and_fuzzy_never_sees_it(db_session: Session)
         run_id="test-run-1",
         blocking_config=_blocking_config(),
         amount_tolerance_minor=100,
+        matching_config=_default_config(),
     )
     outcome = orchestrator.run(bank_code="HDFC")
 
@@ -131,6 +151,7 @@ def test_transactions_exact_cannot_match_fall_through_to_fuzzy(db_session: Sessi
         run_id="test-run-2",
         blocking_config=_blocking_config(),
         amount_tolerance_minor=100,
+        matching_config=_default_config(),
     )
     outcome = orchestrator.run(bank_code="HDFC")
 
@@ -164,6 +185,7 @@ def test_unmatchable_transactions_remain_unmatched_after_both_levels(db_session:
         run_id="test-run-3",
         blocking_config=_blocking_config(),
         amount_tolerance_minor=100,
+        matching_config=_default_config(),
     )
     outcome = orchestrator.run(bank_code="HDFC")
 
@@ -203,6 +225,7 @@ def test_orchestrator_is_scoped_to_a_single_bank_code(db_session: Session) -> No
         run_id="test-run-4",
         blocking_config=_blocking_config(),
         amount_tolerance_minor=100,
+        matching_config=_default_config(),
     )
     outcome = orchestrator.run(bank_code="HDFC")
 
