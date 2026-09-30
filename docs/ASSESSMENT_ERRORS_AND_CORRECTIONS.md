@@ -213,6 +213,14 @@ Unverified or lower-impact: the "Section 26A" penalty citation could not be veri
 - **Test:** `test_second_external_gets_a_free_internal_instead_of_a_consumed_one`.
   "The pre-existing test asserted skipped_claim_conflict_count == 1, which only held because of this bug; updated."
 
+### IB-07: transactions held by a PENDING_REVIEW pair were re-offered to later levels and runs (fixed)
+
+- **What:** review-band pairs hold ACTIVE claims but stay `match_status = 'UNMATCHED'`. `find_unmatched` filtered on status only, so later levels and runs picked the claimed side, hit a claim conflict and skipped a valid match with a free candidate. Same shape as IB-05 and IB-06, across levels.
+- **Impact:** missed matches, never false ones.
+- **Fix:** `find_unmatched` excludes transactions with an ACTIVE claim.
+- **Consequence:** once a reviewer workflow exists, rejecting a review pair must release both claims, or those transactions stay out of the pool permanently. That workflow does not exist yet.
+- **Tests:** `test_actively_claimed_transaction_is_not_in_the_unmatched_pool`, `test_pair_held_for_review_by_an_earlier_run_does_not_block_a_free_candidate`.
+
 ---
 
 ## DD: design and scope decisions
