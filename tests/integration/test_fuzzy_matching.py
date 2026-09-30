@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from recon.config.matching_models import MatchingConfig, MatchingThresholds, MatchingWeights
 from recon.matching.blocking.candidates import BlockingConfig
+from recon.matching.claims import ClaimsService
 from recon.matching.strategies.fuzzy import FuzzyMatchingStrategy
 from recon.persistence.models import MatchClaim, MatchResult, NormalisedTransaction
 from tests.integration.factories import make_ingestion_file, make_txn
@@ -124,8 +125,10 @@ def test_below_review_threshold_writes_nothing(db_session: Session) -> None:
 def test_two_externals_competing_for_one_internal_only_first_wins_and_keeps_its_match(
     db_session: Session,
 ) -> None:
-    """Regression test for the rollback bug: the losing claim must not
-    erase the winning match made earlier in the same session."""
+    """Two externals compete for one internal. The first wins; the second
+    is left unmatched with no orphaned claim, and the first match survives.
+    Since IB-06 the consumed internal is filtered out before scoring, so
+    the second external never reaches a claim conflict at all."""
     f = make_ingestion_file(db_session)
     internal = make_txn(f.id, counterparty_name_normalised="ACME CORPORATION")
     first = _external(f.id, counterparty_name_normalised="ACME CORPORATION")
@@ -136,7 +139,7 @@ def test_two_externals_competing_for_one_internal_only_first_wins_and_keeps_its_
     outcome = _strategy(db_session, "fz-4").run([internal], [first, second])
 
     assert outcome.auto_matched_count == 1
-    assert outcome.skipped_claim_conflict_count == 1
+    assert outcome.skipped_claim_conflict_count == 0  # was 1 before IB-06's consumed filter
     assert db_session.query(MatchResult).count() == 1  # the first match survived
     assert first.match_status == "MATCHED"
     assert second.match_status == "UNMATCHED"
@@ -144,6 +147,54 @@ def test_two_externals_competing_for_one_internal_only_first_wins_and_keeps_its_
     assert (
         db_session.query(MatchClaim)
         .filter(MatchClaim.normalised_transaction_id == second.id)
+        .count()
+        == 0
+    )
+
+
+def test_second_external_gets_a_free_internal_instead_of_a_consumed_one(
+    db_session: Session,
+) -> None:
+    """IB-06: two identical internals, two identical externals. Scores tie,
+    so the first internal wins the first external. The second external
+    must fall to the other internal, not re-pick the consumed one and be
+    skipped as a claim conflict."""
+    f = make_ingestion_file(db_session)
+    internal_a = make_txn(f.id)
+    internal_b = make_txn(f.id)
+    external_1 = _external(f.id)
+    external_2 = _external(f.id)
+    db_session.add_all([internal_a, internal_b, external_1, external_2])
+    db_session.flush()
+
+    outcome = _strategy(db_session, "fz-ib06").run(
+        [internal_a, internal_b], [external_1, external_2]
+    )
+
+    assert outcome.auto_matched_count == 2
+    assert outcome.skipped_claim_conflict_count == 0
+    results = db_session.query(MatchResult).filter(MatchResult.run_id == "fz-ib06").all()
+    assert {r.internal_transaction_id for r in results} == {internal_a.id, internal_b.id}
+
+
+def test_internal_claimed_before_the_run_is_skipped_as_a_conflict(db_session: Session) -> None:
+    """The conflict path still exists for claims made outside this run
+    (an earlier pass, or a pending review). Nothing must be half-claimed."""
+    f = make_ingestion_file(db_session)
+    internal = make_txn(f.id)
+    external = _external(f.id)
+    db_session.add_all([internal, external])
+    db_session.flush()
+    ClaimsService(db_session).claim(internal.id, "INTERNAL")
+
+    outcome = _strategy(db_session, "fz-conflict").run([internal], [external])
+
+    assert outcome.auto_matched_count == 0
+    assert outcome.skipped_claim_conflict_count == 1
+    assert external.match_status == "UNMATCHED"
+    assert (
+        db_session.query(MatchClaim)
+        .filter(MatchClaim.normalised_transaction_id == external.id)
         .count()
         == 0
     )
