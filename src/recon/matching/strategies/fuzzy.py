@@ -62,10 +62,12 @@ class FuzzyMatchingStrategy:
         reviewed = 0
         skipped_conflicts = 0
         result_ids: list[uuid.UUID] = []
+        consumed: set[uuid.UUID] = set()
 
         for external_txn in external_candidates:
             candidate_set = generator.generate(external_txn)
-            best = self._best_candidate(external_txn, candidate_set.candidates)
+            available = [c for c in candidate_set.candidates if c.id not in consumed]
+            best = self._best_candidate(external_txn, available)
 
             if best is None or best.decision == MatchDecision.NO_MATCH:
                 continue
@@ -78,9 +80,7 @@ class FuzzyMatchingStrategy:
                 skipped_conflicts += 1
                 continue
 
-            match_result = self._create_match_result(
-                best, candidate_count=len(candidate_set.candidates)
-            )
+            match_result = self._create_match_result(best, candidate_count=len(available))
             self._session.add(match_result)
             self._session.flush()
 
@@ -99,7 +99,7 @@ class FuzzyMatchingStrategy:
                 # this codebase does not yet implement (no reviewer
                 # workflow exists before WP5).
                 reviewed += 1
-
+            consumed.add(best.internal_txn.id)
             result_ids.append(match_result.id)
 
         return FuzzyMatchOutcome(

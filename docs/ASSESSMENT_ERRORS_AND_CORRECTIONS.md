@@ -205,6 +205,14 @@ Unverified or lower-impact: the "Section 26A" penalty citation could not be veri
 - **Fix:** the matched internal is removed from its hash bucket after a successful match.
 - **Test:** `test_second_external_uses_a_free_internal_instead_of_reusing_a_matched_one`.
 
+### IB-06: fuzzy matching re-offered an already-consumed internal (fixed)
+
+- **What:** `CandidateGenerator` is built once per run, so an internal matched or claimed for an earlier external stayed in later candidate lists. If it was still the top scorer, the claim conflicted and a valid match with a free candidate was skipped. Same shape as IB-05.
+- **Impact:** a missed match, never a false one.
+- **Fix:** a per-run consumed set filters candidates before scoring.
+- **Test:** `test_second_external_gets_a_free_internal_instead_of_a_consumed_one`.
+  "The pre-existing test asserted skipped_claim_conflict_count == 1, which only held because of this bug; updated."
+
 ---
 
 ## DD: design and scope decisions
