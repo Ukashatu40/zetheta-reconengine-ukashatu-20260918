@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from recon.config.matching_models import MatchingConfig, MatchingThresholds, MatchingWeights
 from recon.matching.blocking.candidates import BlockingConfig
+from recon.matching.claims import ClaimsService
 from recon.matching.orchestrator import MatchingOrchestrator
 from recon.persistence.models import IngestionFile, MatchResult, NormalisedTransaction
 
@@ -300,3 +301,40 @@ def test_empty_pool_reports_zero_rates_not_an_error(db_session: Session) -> None
     assert outcome.metrics.exact_match_rate_of_total == 0.0
     assert outcome.metrics.exact_match_rate_of_matchable == 0.0
     assert outcome.metrics.overall_match_rate_of_total == 0.0
+
+
+def test_pair_held_for_review_by_an_earlier_run_does_not_block_a_free_candidate(
+    db_session: Session,
+) -> None:
+    """IB-07: A and E1 are held (active claims, still UNMATCHED), as a
+    PENDING_REVIEW pair would be. A free internal B and a new external E2
+    are otherwise identical to A. E2 must match B, not be skipped as a
+    claim conflict on A."""
+
+    f = _make_ingestion_file(db_session)
+    held_internal = _make_txn(f.id, source="INTERNAL")
+    free_internal = _make_txn(
+        f.id, source="INTERNAL", id=uuid.uuid4(), raw_transaction_id=uuid.uuid4()
+    )
+    held_external = _make_txn(
+        f.id, source="EXTERNAL", id=uuid.uuid4(), raw_transaction_id=uuid.uuid4()
+    )
+    new_external = _make_txn(
+        f.id, source="EXTERNAL", id=uuid.uuid4(), raw_transaction_id=uuid.uuid4()
+    )
+    db_session.add_all([held_internal, free_internal, held_external, new_external])
+    db_session.flush()
+    ClaimsService(db_session).claim_pair(held_internal.id, held_external.id)
+
+    outcome = MatchingOrchestrator(
+        db_session,
+        run_id="test-ib07",
+        blocking_config=_blocking_config(),
+        amount_tolerance_minor=100,
+        matching_config=_default_config(),
+    ).run(bank_code="HDFC")
+
+    assert outcome.total_matched_count == 1
+    assert new_external.match_status == "MATCHED"
+    assert free_internal.match_status == "MATCHED"
+    assert held_internal.match_status == "UNMATCHED"
