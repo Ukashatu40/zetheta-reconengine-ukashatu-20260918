@@ -26,5 +26,6 @@ class MatchingRepository:
                 NormalisedTransaction.match_status == "UNMATCHED",
                 ~actively_claimed,
             )
+            .order_by(NormalisedTransaction.txn_date, NormalisedTransaction.id)
             .all()
         )
