@@ -221,6 +221,12 @@ Unverified or lower-impact: the "Section 26A" penalty citation could not be veri
 - **Consequence:** once a reviewer workflow exists, rejecting a review pair must release both claims, or those transactions stay out of the pool permanently. That workflow does not exist yet.
 - **Tests:** `test_actively_claimed_transaction_is_not_in_the_unmatched_pool`, `test_pair_held_for_review_by_an_earlier_run_does_not_block_a_free_candidate`.
 
+### IB-08: unordered unmatched pool made tie-breaks non-deterministic (fixed)
+
+- **What:** `find_unmatched` had no `ORDER BY`; exact matching's tie-break picks the first equally close candidate, so results could vary between runs (I3, A7.2).
+- **Fix:** order by `(txn_date, id)`.
+- **Test:** `test_pool_order_is_deterministic_regardless_of_insertion_order`.
+
 ---
 
 ## DD: design and scope decisions

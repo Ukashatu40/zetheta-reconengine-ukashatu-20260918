@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
 from sqlalchemy.orm import Session
 
@@ -38,3 +39,20 @@ def test_released_claim_returns_the_transaction_to_the_pool(db_session: Session)
     pool = MatchingRepository(db_session).find_unmatched("HDFC", "INTERNAL")
 
     assert [t.id for t in pool] == [txn.id]
+
+
+def test_pool_order_is_deterministic_regardless_of_insertion_order(db_session: Session) -> None:
+    """IB-08: the pool is ordered by (txn_date, id), never by physical row order."""
+    f = make_ingestion_file(db_session)
+    ids = sorted(uuid.uuid4() for _ in range(6))
+    for txn_id in reversed(ids):  # inserted in descending id order
+        db_session.add(make_txn(f.id, id=txn_id, raw_transaction_id=uuid.uuid4()))
+    early = make_txn(
+        f.id, id=uuid.uuid4(), raw_transaction_id=uuid.uuid4(), txn_date=date(2026, 3, 1)
+    )
+    db_session.add(early)  # earliest date, inserted last
+    db_session.flush()
+
+    pool = MatchingRepository(db_session).find_unmatched("HDFC", "INTERNAL")
+
+    assert [t.id for t in pool] == [early.id, *ids]
