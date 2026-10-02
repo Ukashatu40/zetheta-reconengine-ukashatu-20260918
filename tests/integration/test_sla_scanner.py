@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
+from recon.audit.logger import AuditLogger
 from recon.excmgmt.classifier import ExceptionClassifier
 from recon.excmgmt.sla import SlaScanner
 from recon.excmgmt.taxonomy import load_taxonomy
@@ -18,13 +19,15 @@ def _seed(session: Session, **txn_kwargs: object) -> list[ReconException]:
     f = make_ingestion_file(session)
     session.add(make_txn(f.id, source="EXTERNAL", **txn_kwargs))
     session.flush()
-    ExceptionClassifier(session, load_taxonomy()).classify_unmatched("HDFC", "run-1", _NOW)
+    ExceptionClassifier(session, load_taxonomy(), AuditLogger(session)).classify_unmatched(
+        "HDFC", "run-1", _NOW
+    )
     return session.query(ReconException).all()
 
 
 def test_breach_escalates_one_tier_once(db_session: Session) -> None:
     exc = _seed(db_session)[0]  # MISSING_INTERNAL: tier 2, SLA 240 minutes
-    scanner = SlaScanner(db_session)
+    scanner = SlaScanner(db_session, AuditLogger(db_session))
 
     first = scanner.scan(_NOW + timedelta(minutes=241))
     second = scanner.scan(_NOW + timedelta(minutes=500))
@@ -39,7 +42,7 @@ def test_breach_escalates_one_tier_once(db_session: Session) -> None:
 
 def test_exception_inside_or_exactly_at_its_deadline_is_untouched(db_session: Session) -> None:
     exc = _seed(db_session)[0]
-    scanner = SlaScanner(db_session)
+    scanner = SlaScanner(db_session, AuditLogger(db_session))
 
     assert scanner.scan(_NOW + timedelta(minutes=239)).escalated_count == 0
     assert scanner.scan(_NOW + timedelta(minutes=240)).escalated_count == 0  # strictly past only
@@ -55,9 +58,11 @@ def test_breach_at_tier_4_is_recorded_without_changing_the_tier(db_session: Sess
         ]
     )
     db_session.flush()
-    ExceptionClassifier(db_session, load_taxonomy()).classify_unmatched("HDFC", "run-1", _NOW)
+    ExceptionClassifier(db_session, load_taxonomy(), AuditLogger(db_session)).classify_unmatched(
+        "HDFC", "run-1", _NOW
+    )
     exc = db_session.query(ReconException).one()  # DIRECTION_REVERSAL, tier 4, 30 minutes
-    scanner = SlaScanner(db_session)
+    scanner = SlaScanner(db_session, AuditLogger(db_session))
 
     first = scanner.scan(_NOW + timedelta(minutes=31))
     second = scanner.scan(_NOW + timedelta(minutes=90))
@@ -77,4 +82,9 @@ def test_resolved_exceptions_are_ignored(db_session: Session) -> None:
     exc.status = "RESOLVED"
     db_session.flush()
 
-    assert SlaScanner(db_session).scan(_NOW + timedelta(days=2)).escalated_count == 0
+    assert (
+        SlaScanner(db_session, AuditLogger(db_session))
+        .scan(_NOW + timedelta(days=2))
+        .escalated_count
+        == 0
+    )

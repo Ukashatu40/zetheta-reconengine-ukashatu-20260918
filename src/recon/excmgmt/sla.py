@@ -2,7 +2,7 @@
 """SLA scanner (R66). An exception breaches once: the tier goes up by one
 (capped at 4) and sla_breached_at is stamped, so a later scan does not
 escalate it again. A breach at Tier 4 records an SLA_BREACHED event with no
-tier change. The event rows are the simulated notifications.
+tier change. Every breach is also written to the audit chain (A4.3 ESCALATE).
 """
 
 from __future__ import annotations
@@ -12,7 +12,9 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
-from recon.domain.enums import EscalationTier
+from recon.audit.chains import EXCEPTIONS_CHAIN
+from recon.audit.logger import AuditLogger
+from recon.domain.enums import AuditActionType, EscalationTier
 from recon.excmgmt.routing import tier_after_sla_check
 from recon.persistence.models import ExceptionEvent, ReconException
 
@@ -27,8 +29,9 @@ class SlaScanOutcome:
 
 
 class SlaScanner:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, audit: AuditLogger) -> None:
         self._session = session
+        self._audit = audit
 
     def scan(self, now: datetime) -> SlaScanOutcome:
         if now.tzinfo is None:
@@ -47,6 +50,7 @@ class SlaScanner:
         escalated = top_tier = 0
         for exception in due:
             current = EscalationTier(exception.assigned_tier)
+            previous_status = exception.status
             new = tier_after_sla_check(current, exception.sla_deadline, now)
             exception.sla_breached_at = now
             if new == current:
@@ -67,6 +71,17 @@ class SlaScanner:
                     detail=detail,
                     occurred_at=now,
                 )
+            )
+            self._audit.append(
+                chain_id=EXCEPTIONS_CHAIN,
+                actor_type="SYSTEM",
+                actor_id="sla-scanner",
+                action_type=AuditActionType.ESCALATE,
+                occurred_at=now,
+                affected_records={"exception_id": str(exception.id)},
+                before_state={"tier": current.value, "status": previous_status},
+                after_state={"tier": new.value, "status": exception.status},
+                rationale=detail,
             )
         self._session.flush()
         return SlaScanOutcome(escalated, top_tier)
