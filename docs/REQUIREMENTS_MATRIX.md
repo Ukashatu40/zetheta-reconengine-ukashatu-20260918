@@ -81,6 +81,9 @@ MISSING — they'll be added as each WP begins.
 
 ## WP5: Exceptions
 
+| R33 | Reject files with duplicate content hash | `ingestion_files.content_sha256` unique, `DuplicateFileError` | `test_duplicate_file_content_is_rejected_before_any_transactions_are_written` | PASS |
+| R34 | Settlement uniqueness check across files by reference | classifier duplicate detection (DD-13) | `test_duplicate_external_in_a_later_file_is_found_even_when_both_are_matched` | PARTIAL: per-transaction, not set-level; does not unmatch |
+| R35 | Alert when match rate exceeds 99.5% | none | none | MISSING |
 | R60 | 18 categories as an Enum (+SETTLEMENT_DELAY) | `domain/enums.py`, `config/exceptions/taxonomy.yaml` | `test_taxonomy.py` | PASS |
 | R62 | Severity levels, independent of SLA | `excmgmt/routing.py` (AE-07) | `test_routing.py` | PASS |
 | R64 | Four-tier routing | `excmgmt/routing.py` | `test_routing.py` | PARTIAL: no queues; scanner exists |

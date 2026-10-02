@@ -143,6 +143,13 @@ instruction, not on an external source.
 - **Not met:** physical separation. A superuser can bypass the trigger; the hash chain, not the trigger, is what makes tampering detectable.
 - **Status:** Partial. The logger still writes through the application's own session, not the `recon_audit` role.
 
+### AE-21: STALE_TRANSACTION hard-codes T+5
+
+- **PDF:** A4.1 #13 defines stale as older than T+5, while A5.3 gives windows from T+0 (RTGS) to T+5 (cross-border).
+- **Correction:** the window is a caller-supplied value taken from each bank's `reconciliation_window_days`.
+- **Status:** Implemented in the classifier; nothing yet wires the bank config in (the API/run layer will).
+- **Test:** `test_stale_only_when_strictly_older_than_the_window`.
+
 ### AE-26: PAN masking specified at the wrong layer
 
 - **PDF (A9.3):** mask in the normalisation layer, but Day 1 persists raw data before normalisation, so full PANs would be stored.
@@ -264,3 +271,4 @@ Unverified or lower-impact: the "Section 26A" penalty citation could not be veri
 - **DD-10: value thresholds are evaluated on INR amounts only.** No FX rates exist yet, so non-INR amounts never trigger the Tier 3 value rule, and the cumulative daily value is not computed. AE-07's "INR-equivalent" is not fully met.
 - **DD-11: pair classification needs a unique reference.** An unmatched external and internal sharing a reference are classified only when that reference is unambiguous; otherwise both sides are reported as MISSING.
 - **DD-12: audit scope and limits.** `recorded_at` is excluded from the hash (the database sets it). Tail truncation is undetectable without an exported head (`chain_head`, `expected_head`); nothing exports or stores one yet. Writers to one chain are serialised by an advisory lock held until the transaction ends. Float values are rejected in audit state. Only the exception classifier and SLA scanner write audit entries so far. The `EXCEPTION_CREATE` action is an addition to A4.3's list.
+- **DD-13: duplicate and stale detection rules.** A duplicate shares source, normalised reference, amount, currency, direction and date. The earliest-ingested copy (then line, then id) is the original; later copies get the exception. Detection ignores match status, so duplicates already matched (B4.4) are found, but nothing is unmatched or voided. Stale replaces MISSING for an unmatched record past the window. A record first reported as MISSING that later becomes stale gets a second, separate STALE exception; resolving one does not resolve the other. The duplicate scan is a full `GROUP BY` per bank with no supporting index.

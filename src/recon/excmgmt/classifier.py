@@ -16,11 +16,11 @@ from __future__ import annotations
 import uuid
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select, tuple_
 from sqlalchemy.orm import Session
 
 from recon.audit.chains import EXCEPTIONS_CHAIN
@@ -39,6 +39,7 @@ from recon.persistence.repositories.matching import MatchingRepository
 
 _ACTOR = "system:classifier"
 _KEY_CHUNK = 5000
+_DUP_KEY_CHUNK = 1000  # six bind parameters per key; stays well under the driver limit
 _FORMAT_ERROR_SAMPLE_LINES = 100
 
 _SUGGESTED_RESOLUTION: dict[ExceptionCategory, str] = {
@@ -61,6 +62,16 @@ _SUGGESTED_RESOLUTION: dict[ExceptionCategory, str] = {
         "Compare the amounts; correct the wrong side or record a fee or adjustment."
     ),
     ExceptionCategory.DATE_MISMATCH: ("Check booking versus value dates and settlement timing."),
+    ExceptionCategory.DUPLICATE_INTERNAL: (
+        "Void the duplicate ledger entry and link it to the original."
+    ),
+    ExceptionCategory.DUPLICATE_EXTERNAL: (
+        "Confirm with the bank whether the settlement was processed twice; do not double-count."
+    ),
+    ExceptionCategory.STALE_TRANSACTION: (
+        """Investigate why it is still unmatched past the window;
+        chase the bank or write off with approval."""
+    ),
 }
 
 
@@ -110,11 +121,32 @@ class ExceptionClassifier:
         candidates = self._format_error_candidates(ingestion_file, rows)
         return self._persist(candidates, None, now, batch_count=len(rows))
 
-    def classify_unmatched(self, bank_code: str, run_id: str, now: datetime) -> ClassifierOutcome:
+    def classify_unmatched(
+        self,
+        bank_code: str,
+        run_id: str,
+        now: datetime,
+        *,
+        as_of_date: date | None = None,
+        stale_after_days: int | None = None,
+    ) -> ClassifierOutcome:
+        if (as_of_date is None) != (stale_after_days is None):
+            raise ValueError("as_of_date and stale_after_days must be given together")
+        duplicates, duplicate_ids = self._duplicate_candidates(bank_code)
         repository = MatchingRepository(self._session)
-        internals = repository.find_unmatched(bank_code, "INTERNAL")
-        externals = repository.find_unmatched(bank_code, "EXTERNAL")
-        candidates = self._unmatched_candidates(bank_code, internals, externals)
+        internals = [
+            t for t in repository.find_unmatched(bank_code, "INTERNAL") if t.id not in duplicate_ids
+        ]
+        externals = [
+            t for t in repository.find_unmatched(bank_code, "EXTERNAL") if t.id not in duplicate_ids
+        ]
+        candidates = duplicates + self._unmatched_candidates(
+            bank_code,
+            internals,
+            externals,
+            as_of_date=as_of_date,
+            stale_after_days=stale_after_days,
+        )
         return self._persist(candidates, run_id, now, batch_count=len(candidates))
 
     # -- candidate building ------------------------------------------------
@@ -164,6 +196,9 @@ class ExceptionClassifier:
         bank_code: str,
         internals: list[NormalisedTransaction],
         externals: list[NormalisedTransaction],
+        *,
+        as_of_date: date | None,
+        stale_after_days: int | None,
     ) -> list[_Candidate]:
         by_reference: dict[str, list[NormalisedTransaction]] = {}
         for internal in internals:
@@ -188,10 +223,16 @@ class ExceptionClassifier:
 
         for external in externals:
             if external.id not in paired_externals:
-                candidates.append(_missing_candidate(ExceptionCategory.MISSING_INTERNAL, external))
+                stale = _is_stale(external, as_of_date, stale_after_days)
+                candidates.append(
+                    _missing_candidate(ExceptionCategory.MISSING_INTERNAL, external, stale=stale)
+                )
         for internal in internals:
             if internal.id not in paired_internals:
-                candidates.append(_missing_candidate(ExceptionCategory.MISSING_EXTERNAL, internal))
+                stale = _is_stale(internal, as_of_date, stale_after_days)
+                candidates.append(
+                    _missing_candidate(ExceptionCategory.MISSING_EXTERNAL, internal, stale=stale)
+                )
         return candidates
 
     # -- persistence -------------------------------------------------------
@@ -298,6 +339,57 @@ class ExceptionClassifier:
             )
         return found
 
+    def _duplicate_candidates(self, bank_code: str) -> tuple[list[_Candidate], set[uuid.UUID]]:
+        """Reports every copy after the first (earliest ingestion, then line,
+        then id) of a transaction sharing source, reference, amount,
+        currency, direction and date. Ignores match status."""
+        nt = NormalisedTransaction
+        key_columns = (
+            nt.source,
+            nt.normalised_reference,
+            nt.amount_minor,
+            nt.currency,
+            nt.direction,
+            nt.txn_date,
+        )
+        keys = [
+            tuple(row)
+            for row in self._session.execute(
+                select(*key_columns)
+                .where(
+                    nt.bank_code == bank_code,
+                    nt.normalised_reference.is_not(None),
+                    nt.normalised_reference != "",
+                )
+                .group_by(*key_columns)
+                .having(func.count() > 1)
+            )
+        ]
+        candidates: list[_Candidate] = []
+        duplicate_ids: set[uuid.UUID] = set()
+        for start in range(0, len(keys), _DUP_KEY_CHUNK):
+            members = (
+                self._session.query(nt)
+                .join(IngestionFile, IngestionFile.id == nt.ingestion_file_id)
+                .filter(
+                    nt.bank_code == bank_code,
+                    tuple_(*key_columns).in_(keys[start : start + _DUP_KEY_CHUNK]),
+                )
+                .order_by(IngestionFile.ingested_at, nt.source_line_no, nt.id)
+                .all()
+            )
+            groups: dict[tuple[object, ...], list[NormalisedTransaction]] = {}
+            for member in members:
+                key = (member.source, member.normalised_reference, member.amount_minor,
+                       member.currency, member.direction, member.txn_date)  # fmt: skip
+                groups.setdefault(key, []).append(member)
+            for group in groups.values():
+                original, *copies = group
+                for copy in copies:
+                    duplicate_ids.add(copy.id)
+                    candidates.append(_duplicate_candidate(bank_code, original, copy))
+        return candidates, duplicate_ids
+
 
 def _error_codes(row: RawTransaction) -> str:
     errors = (row.parse_errors or {}).get("errors", [])
@@ -308,18 +400,65 @@ def _inr_minor(txn: NormalisedTransaction) -> int | None:
     return txn.amount_minor if txn.currency == "INR" else None
 
 
-def _missing_candidate(category: ExceptionCategory, txn: NormalisedTransaction) -> _Candidate:
+def _is_stale(
+    txn: NormalisedTransaction, as_of_date: date | None, stale_after_days: int | None
+) -> bool:
+    if as_of_date is None or stale_after_days is None:
+        return False
+    return (as_of_date - txn.txn_date).days > stale_after_days
+
+
+def _duplicate_candidate(
+    bank_code: str, original: NormalisedTransaction, copy: NormalisedTransaction
+) -> _Candidate:
+    category = (
+        ExceptionCategory.DUPLICATE_INTERNAL
+        if copy.source == "INTERNAL"
+        else ExceptionCategory.DUPLICATE_EXTERNAL
+    )
+    same_file = copy.ingestion_file_id == original.ingestion_file_id
+    where = "the same file" if same_file else "a different ingestion file"
+    return _Candidate(
+        category=category,
+        dedupe_key=f"{category.value}:txn:{copy.id}",
+        bank_code=bank_code,
+        affected_records={
+            "normalised_transaction_ids": [str(copy.id)],
+            "original_transaction_id": str(original.id),
+            "same_ingestion_file": same_file,
+        },
+        rationale=(
+            f"""Reference {copy.normalised_reference} with identical amount,
+            currency, direction and date """
+            f"already exists as transaction {original.id} ({where}, ingested first)."
+        ),
+        amount=copy.amount,
+        currency=copy.currency,
+        amount_inr_minor=_inr_minor(copy),
+    )
+
+
+def _missing_candidate(
+    category: ExceptionCategory, txn: NormalisedTransaction, *, stale: bool = False
+) -> _Candidate:
     side = (
         "bank statement but not in the internal ledger"
         if category is ExceptionCategory.MISSING_INTERNAL
-        else ("internal ledger but not in the bank statement")
+        else "internal ledger but not in the bank statement"
+    )
+    final = ExceptionCategory.STALE_TRANSACTION if stale else category
+    prefix = (
+        "Past the reconciliation window and still unmatched: reference" if stale else "Reference"
     )
     return _Candidate(
-        category=category,
-        dedupe_key=f"{category.value}:txn:{txn.id}",
+        category=final,
+        dedupe_key=f"{final.value}:txn:{txn.id}",
         bank_code=txn.bank_code,
-        affected_records={"normalised_transaction_ids": [str(txn.id)]},
-        rationale=f"Reference {txn.normalised_reference or '(none)'} is in the {side}.",
+        affected_records={
+            "normalised_transaction_ids": [str(txn.id)],
+            "missing_side": category.value,
+        },
+        rationale=f"{prefix} {txn.normalised_reference or '(none)'} is in the {side}.",
         amount=txn.amount,
         currency=txn.currency,
         amount_inr_minor=_inr_minor(txn),
