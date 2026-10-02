@@ -37,7 +37,7 @@ instruction, not on an external source.
 - **PDF (A4.1 #8):** SLA 1 hour. The PDF itself instructs correcting it to 30 minutes with mandatory Compliance escalation.
 - **Reasoning:** a reversed DR/CR indicator is a booking defect or manipulation. Totals can still balance in absolute terms while the net position is wrong by twice the amount, so time to containment is the whole control.
 - **Correction:** 30 minutes, Tier 4, not auto-resolvable. SLA and severity are independent fields (AE-07).
-- **Status:** Planned (exception engine). No test yet.
+- **Status:** Implemented in config/exceptions/taxonomy.yaml (30 minutes, Tier 4); test test_direction_reversal_applies_the_ae03_correction.
 
 ### AE-04: NPCI rounding attribution and float-drift conflation
 
@@ -65,7 +65,7 @@ instruction, not on an external source.
 
 - **PDF (Day 4):** severity derives from SLA, which derives from category, so severity carries no independent information. A ₹50 lakh DATE_MISMATCH would be CRITICAL by value and LOW by SLA.
 - **Correction:** severity = max(category base severity, value-derived severity), computed independently of SLA, on the INR-equivalent amount.
-- **Status:** Planned (enum exists; classifier not built).
+- **Status:** Implemented in config/exceptions/taxonomy.yaml (30 minutes, Tier 4); test test_severity_is_independent_of_sla_ae07.
 
 ### AE-08: Confidence band boundaries are ambiguous
 
@@ -164,6 +164,13 @@ instruction, not on an external source.
 - **Status:** Implemented, with a caveat. `RunMetrics` reports `exact_match_rate_of_total` and `exact_match_rate_of_matchable` separately. "Matchable" here means resolved by exact or fuzzy auto-match within the same orchestrator run — it does not yet account for a PENDING_REVIEW row later confirmed by a human, since no reviewer workflow exists. The engine is not tuned toward either rate.
 - **Test:** `test_match_rates_are_reported_separately_and_review_rows_are_excluded`.
 
+### AE-36: A4.1 auto-resolves AMOUNT_MISMATCH "if < 0.01"
+
+- **PDF:** A4.1 #3 says auto-resolvable "If < 0.01", while A3.3's tolerance is "±0.01".
+- **Problem:** in a 2-decimal currency, a difference strictly below 0.01 can only be zero, which is not a mismatch. Matches within ±0.01 would also never become exceptions.
+- **Correction:** auto-resolve when the difference is at most `amount_mismatch_max_difference_minor` (default 1 minor unit).
+- **Status:** Implemented. **Test:** `test_amount_mismatch_auto_resolves_only_within_one_minor_unit`.
+
 ### Other Phase 0 observations, not yet individually numbered
 
 Unverified or lower-impact: the "Section 26A" penalty citation could not be verified; community PostgreSQL has no TDE, so encryption at rest is volume-level; the Paytm deadline was extended from 29 February to 15 March 2024; subset-sum is many-to-one, not many-to-many, so netted matching will be a bounded heuristic.
@@ -237,3 +244,4 @@ Unverified or lower-impact: the "Section 26A" penalty citation could not be veri
 - **DD-04: a standalone `:86:` with no preceding `:61:` is lexed and then dropped.**
 - **DD-05: no phonetic or transliteration matching.** Soundex fits English poorly and RapidFuzz ships no phonetic algorithms; name variance is left to Token Set Ratio.
 - **DD-06: reference truncate and pad are opt-in only.** Silent truncation would make REFERENCE_TRUNCATED undetectable for references we shortened ourselves.
+- **DD-07: SETTLEMENT_DELAY is the 19th category** (A7.1 suggests it). The PDF gives no SLA, so 24 hours, Tier 2 and MEDIUM severity are `[ENGINEERING DECISION]`. Value above the thresholds overrides auto-resolution to Tier 3.

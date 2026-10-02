@@ -1,0 +1,165 @@
+config_version: taxonomy.v1
+value_thresholds:
+  critical_individual_inr_minor: 100000000 # Rs 10 lakh in paise (A4.2)
+  critical_cumulative_daily_inr_minor: 1000000000 # Rs 1 crore in paise (A4.2)
+auto_resolve:
+  amount_mismatch_max_difference_minor: 1 # AE-36: "<0.01" read as within one minor unit
+  date_mismatch_max_days: 1 # "<= T+1"
+  reference_truncated_min_confidence: "0.85" # strictly above, per AE-08
+escalation:
+  fx_variance_tier4_percent: "3.0" # strictly beyond (A4.2)
+  systemic_exception_count: 50 # strictly more than, per bank per batch (A4.2)
+# default_tier = tier used when the exception is NOT auto-resolved.
+categories:
+  - {
+      category: MISSING_INTERNAL,
+      auto_resolvable: NEVER,
+      sla_minutes: 240,
+      base_severity: HIGH,
+      default_tier: 2,
+      source: PDF,
+    }
+  - {
+      category: MISSING_EXTERNAL,
+      auto_resolvable: NEVER,
+      sla_minutes: 240,
+      base_severity: HIGH,
+      default_tier: 2,
+      source: PDF,
+    }
+  - {
+      category: AMOUNT_MISMATCH,
+      auto_resolvable: CONDITIONAL,
+      sla_minutes: 120,
+      base_severity: MEDIUM,
+      default_tier: 2,
+      source: PDF,
+    }
+  - {
+      category: DUPLICATE_INTERNAL,
+      auto_resolvable: ALWAYS,
+      sla_minutes: 60,
+      base_severity: HIGH,
+      default_tier: 2,
+      source: PDF,
+    }
+  - {
+      category: DUPLICATE_EXTERNAL,
+      auto_resolvable: NEVER,
+      sla_minutes: 120,
+      base_severity: HIGH,
+      default_tier: 2,
+      source: PDF,
+    }
+  - {
+      category: DATE_MISMATCH,
+      auto_resolvable: CONDITIONAL,
+      sla_minutes: 480,
+      base_severity: LOW,
+      default_tier: 2,
+      source: PDF,
+    }
+  - {
+      category: CURRENCY_MISMATCH,
+      auto_resolvable: NEVER,
+      sla_minutes: 240,
+      base_severity: MEDIUM,
+      default_tier: 2,
+      source: PDF,
+    }
+  - {
+      category: DIRECTION_REVERSAL,
+      auto_resolvable: NEVER,
+      sla_minutes: 30,
+      base_severity: CRITICAL,
+      default_tier: 4,
+      source: PDF_CORRECTED,
+    }
+  - {
+      category: PARTIAL_MATCH,
+      auto_resolvable: ALWAYS,
+      sla_minutes: 240,
+      base_severity: LOW,
+      default_tier: 2,
+      source: PDF,
+    }
+  - {
+      category: NETTED_SETTLEMENT,
+      auto_resolvable: ALWAYS,
+      sla_minutes: 480,
+      base_severity: LOW,
+      default_tier: 2,
+      source: PDF,
+    }
+  - {
+      category: FEE_DEDUCTION,
+      auto_resolvable: ALWAYS,
+      sla_minutes: 120,
+      base_severity: LOW,
+      default_tier: 2,
+      source: PDF,
+    }
+  - {
+      category: FX_VARIANCE,
+      auto_resolvable: NEVER,
+      sla_minutes: 240,
+      base_severity: MEDIUM,
+      default_tier: 2,
+      source: PDF,
+    }
+  - {
+      category: STALE_TRANSACTION,
+      auto_resolvable: NEVER,
+      sla_minutes: 1440,
+      base_severity: MEDIUM,
+      default_tier: 2,
+      source: PDF,
+    }
+  - {
+      category: FORMAT_ERROR,
+      auto_resolvable: NEVER,
+      sla_minutes: 60,
+      base_severity: HIGH,
+      default_tier: 2,
+      source: PDF,
+    }
+  - {
+      category: REFERENCE_TRUNCATED,
+      auto_resolvable: CONDITIONAL,
+      sla_minutes: 120,
+      base_severity: LOW,
+      default_tier: 2,
+      source: PDF,
+    }
+  - {
+      category: TIMEZONE_OFFSET,
+      auto_resolvable: ALWAYS,
+      sla_minutes: 60,
+      base_severity: LOW,
+      default_tier: 2,
+      source: PDF,
+    }
+  - {
+      category: REVERSAL_PENDING,
+      auto_resolvable: NEVER,
+      sla_minutes: 1440,
+      base_severity: MEDIUM,
+      default_tier: 2,
+      source: PDF,
+    }
+  - {
+      category: REGULATORY_HOLD,
+      auto_resolvable: NEVER,
+      sla_minutes: 2880,
+      base_severity: CRITICAL,
+      default_tier: 4,
+      source: PDF,
+    }
+  - {
+      category: SETTLEMENT_DELAY,
+      auto_resolvable: NEVER,
+      sla_minutes: 1440,
+      base_severity: MEDIUM,
+      default_tier: 2,
+      source: ENGINEERING_DECISION,
+    }
