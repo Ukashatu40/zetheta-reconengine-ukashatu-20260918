@@ -90,6 +90,10 @@ MISSING — they'll be added as each WP begins.
 | R65 | EscalationManager | `excmgmt/sla.py`, `routing.py` | `test_sla_scanner.py` | PARTIAL: no analyst queue or assignment; Tier 1 auto-resolution actions not implemented (DD-08) |
 | R66 | SLA monitoring, breach escalation, notification events | `excmgmt/sla.py`, `exception_events` | `test_sla_scanner.py` | PASS (events are the simulated notifications) |
 | R71 | Audit every action | none yet | none | MISSING: classifier and scanner write no audit entries |
+| R68 | AuditLogger, append-only | `audit/logger.py`; trigger and grants (WP1) | `test_audit_logger.py`, `test_audit_log_append_only.py` | PARTIAL: not written through the `recon_audit` role; same database |
+| R69 | Entry fields incl. UUID, microsecond UTC, before/after state, hash | `audit/canonical.py` | `test_canonical.py` | PASS |
+| R70 | Tamper-evident chain and verifier reporting tampered entries | `audit/verifier.py` | `test_audit_verifier.py` | PASS (tail truncation needs an anchor; none exported) |
+| R71 | Audit every pipeline action | classifier and SLA scanner only | `test_exception_audit.py` | PARTIAL: ingestion, normalisation, matching, resolution and override are not audited |
 
 ## Not yet started
 

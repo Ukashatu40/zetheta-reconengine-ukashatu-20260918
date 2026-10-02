@@ -129,6 +129,20 @@ instruction, not on an external source.
 - **Status:** Implemented.
 - **Tests:** `test_per_currency_exponent`, `test_jpy_quantizes_to_zero_decimal_places`.
 
+### AE-18: the audit "hash over the entry's own fields" is not a chain
+
+- **PDF (Day 4):** the SHA-256 covers the entry's fields and is called "a tamper-evident chain".
+- **Problem:** a per-row hash detects an edit only if the hash is stored elsewhere; deletion, reordering and insertion pass, and an attacker with write access recomputes the stored hash.
+- **Correction:** `current_hash` covers the canonical fields plus `prev_hash`; sequence numbers are contiguous per chain; a verifier walks the chain.
+- **Status:** Implemented. **Tests:** `test_an_attacker_who_recomputes_the_hash_is_caught_by_the_next_entry`, `test_deleting_a_middle_entry_is_detected_as_a_sequence_gap`.
+
+### AE-19: "append-only, stored separately from the operational database"
+
+- **PDF:** A4.3 requires separate storage; Day 1 lists `audit_log` among the schema's tables.
+- **Correction:** a dedicated `audit` schema in the same database, a restricted `recon_audit` role, and a trigger that rejects UPDATE and DELETE for every role including the owner.
+- **Not met:** physical separation. A superuser can bypass the trigger; the hash chain, not the trigger, is what makes tampering detectable.
+- **Status:** Partial. The logger still writes through the application's own session, not the `recon_audit` role.
+
 ### AE-26: PAN masking specified at the wrong layer
 
 - **PDF (A9.3):** mask in the normalisation layer, but Day 1 persists raw data before normalisation, so full PANs would be stored.
@@ -249,3 +263,4 @@ Unverified or lower-impact: the "Section 26A" penalty citation could not be veri
 - **DD-09: more than 50 quarantined rows in one file collapse into one file-level FORMAT_ERROR** (Tier 4, systemic per A4.2) with a total count and 100 sample line numbers. This avoids 45,000 rows for one root cause (B4.1).
 - **DD-10: value thresholds are evaluated on INR amounts only.** No FX rates exist yet, so non-INR amounts never trigger the Tier 3 value rule, and the cumulative daily value is not computed. AE-07's "INR-equivalent" is not fully met.
 - **DD-11: pair classification needs a unique reference.** An unmatched external and internal sharing a reference are classified only when that reference is unambiguous; otherwise both sides are reported as MISSING.
+- **DD-12: audit scope and limits.** `recorded_at` is excluded from the hash (the database sets it). Tail truncation is undetectable without an exported head (`chain_head`, `expected_head`); nothing exports or stores one yet. Writers to one chain are serialised by an advisory lock held until the transaction ends. Float values are rejected in audit state. Only the exception classifier and SLA scanner write audit entries so far. The `EXCEPTION_CREATE` action is an addition to A4.3's list.

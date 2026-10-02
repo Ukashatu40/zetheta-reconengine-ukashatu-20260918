@@ -8,6 +8,7 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.orm import Session
 
+from recon.audit.logger import AuditLogger
 from recon.excmgmt.classifier import ExceptionClassifier
 from recon.excmgmt.taxonomy import load_taxonomy
 from recon.matching.claims import ClaimsService
@@ -19,7 +20,7 @@ _NOW = datetime(2026, 3, 15, 12, 0, tzinfo=UTC)
 
 
 def _classifier(session: Session) -> ExceptionClassifier:
-    return ExceptionClassifier(session, load_taxonomy())
+    return ExceptionClassifier(session, load_taxonomy(), AuditLogger(session))
 
 
 def _ext(file_id: uuid.UUID, **kw: object) -> NormalisedTransaction:

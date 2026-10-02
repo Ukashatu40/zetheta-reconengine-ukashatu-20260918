@@ -23,8 +23,10 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from recon.domain.enums import ExceptionCategory
-from recon.excmgmt.routing import ExceptionContext, route
+from recon.audit.chains import EXCEPTIONS_CHAIN
+from recon.audit.logger import AuditLogger
+from recon.domain.enums import AuditActionType, ExceptionCategory
+from recon.excmgmt.routing import ExceptionContext, RoutingDecision, route
 from recon.excmgmt.taxonomy import TaxonomyConfig
 from recon.persistence.models import (
     ExceptionEvent,
@@ -85,9 +87,10 @@ class _Candidate:
 
 
 class ExceptionClassifier:
-    def __init__(self, session: Session, taxonomy: TaxonomyConfig) -> None:
+    def __init__(self, session: Session, taxonomy: TaxonomyConfig, audit: AuditLogger) -> None:
         self._session = session
         self._taxonomy = taxonomy
+        self._audit = audit
 
     def classify_ingestion_file(
         self, ingestion_file_id: uuid.UUID, now: datetime
@@ -200,6 +203,7 @@ class ExceptionClassifier:
         created: Counter[str] = Counter()
         skipped = 0
         events: list[ExceptionEvent] = []
+        audited: list[tuple[uuid.UUID, _Candidate, RoutingDecision]] = []
 
         for candidate in candidates:
             if candidate.dedupe_key in existing:
@@ -252,13 +256,36 @@ class ExceptionClassifier:
                 )
             )
             created[candidate.category.value] += 1
+            audited.append((exception_id, candidate, decision))
 
         # Exceptions flush first: events carry a foreign key and there is no
         # relationship() to order the inserts for us.
         self._session.flush()
         self._session.add_all(events)
         self._session.flush()
+        self._audit_created(audited, now)
         return ClassifierOutcome(sum(created.values()), skipped, dict(created))
+
+    def _audit_created(
+        self, audited: list[tuple[uuid.UUID, _Candidate, RoutingDecision]], now: datetime
+    ) -> None:
+        for exception_id, candidate, decision in audited:
+            self._audit.append(
+                chain_id=EXCEPTIONS_CHAIN,
+                actor_type="SYSTEM",
+                actor_id="classifier",
+                action_type=AuditActionType.EXCEPTION_CREATE,
+                occurred_at=now,
+                affected_records={"exception_id": str(exception_id), **candidate.affected_records},
+                after_state={
+                    "category": candidate.category.value,
+                    "severity": decision.severity.value,
+                    "tier": decision.tier.value,
+                    "status": "OPEN",
+                    "sla_deadline": decision.sla_deadline.isoformat(),
+                },
+                rationale=f"{candidate.rationale} Routing: {decision.rationale}.",
+            )
 
     def _existing_keys(self, keys: list[str]) -> set[str]:
         found: set[str] = set()
