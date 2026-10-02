@@ -83,8 +83,13 @@ MISSING — they'll be added as each WP begins.
 
 | R60 | 18 categories as an Enum (+SETTLEMENT_DELAY) | `domain/enums.py`, `config/exceptions/taxonomy.yaml` | `test_taxonomy.py` | PASS |
 | R62 | Severity levels, independent of SLA | `excmgmt/routing.py` (AE-07) | `test_routing.py` | PASS |
-| R64 | Four-tier routing | `excmgmt/routing.py` | `test_routing.py` | PARTIAL: decision logic only; no queues, no persistence |
-| R66 | SLA monitoring and breach escalation | `tier_after_sla_check` | `test_routing.py` | PARTIAL: pure function; no scanner, no notification events |
+| R64 | Four-tier routing | `excmgmt/routing.py` | `test_routing.py` | PARTIAL: no queues; scanner exists |
+| R66 | SLA monitoring and breach escalation | `tier_after_sla_check` | `test_routing.py` | PASS: pure function; no scanner, no notification events |
+| R61 | Classifier with rules per category | `excmgmt/classifier.py` | `test_exception_classifier.py` | PARTIAL: 7 of 19 categories detected |
+| R63 | Exceptions table (category, severity, affected records, resolution, tier, SLA) | `persistence/models/exceptions.py` | `test_exception_persistence.py` | PASS |
+| R65 | EscalationManager | `excmgmt/sla.py`, `routing.py` | `test_sla_scanner.py` | PARTIAL: no analyst queue or assignment; Tier 1 auto-resolution actions not implemented (DD-08) |
+| R66 | SLA monitoring, breach escalation, notification events | `excmgmt/sla.py`, `exception_events` | `test_sla_scanner.py` | PASS (events are the simulated notifications) |
+| R71 | Audit every action | none yet | none | MISSING: classifier and scanner write no audit entries |
 
 ## Not yet started
 
