@@ -79,6 +79,13 @@ MISSING — they'll be added as each WP begins.
 | R52   | Rule engine as ordered Rule objects                                                 | `matching/rules/base.py`; `strategies/rule_based.py`                            | `test_rules_base.py`, `test_rule_based_matching.py`                       | PARTIAL: one concrete rule; strategy not yet wired into the orchestrator                                            |
 | R53   | Amount Tolerance Rule, configurable per currency                                    | `matching/rules/amount_tolerance.py`                                            | `test_amount_tolerance_rule.py`                                           | PARTIAL: same-currency only; cross-currency needs FX; tolerance is constructor-configured, not yet loaded from YAML |
 
+## WP5: Exceptions
+
+| R60 | 18 categories as an Enum (+SETTLEMENT_DELAY) | `domain/enums.py`, `config/exceptions/taxonomy.yaml` | `test_taxonomy.py` | PASS |
+| R62 | Severity levels, independent of SLA | `excmgmt/routing.py` (AE-07) | `test_routing.py` | PASS |
+| R64 | Four-tier routing | `excmgmt/routing.py` | `test_routing.py` | PARTIAL: decision logic only; no queues, no persistence |
+| R66 | SLA monitoring and breach escalation | `tier_after_sla_check` | `test_routing.py` | PARTIAL: pure function; no scanner, no notification events |
+
 ## Not yet started
 
 Everything under Matching (L0-L7), Exception Classification, Escalation,
