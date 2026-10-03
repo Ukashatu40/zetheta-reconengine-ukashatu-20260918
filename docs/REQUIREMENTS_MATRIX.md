@@ -97,6 +97,13 @@ MISSING — they'll be added as each WP begins.
 | R69 | Entry fields incl. UUID, microsecond UTC, before/after state, hash | `audit/canonical.py` | `test_canonical.py` | PASS |
 | R70 | Tamper-evident chain and verifier reporting tampered entries | `audit/verifier.py` | `test_audit_verifier.py` | PASS (tail truncation needs an anchor; none exported) |
 | R71 | Audit every pipeline action | classifier and SLA scanner only | `test_exception_audit.py` | PARTIAL: ingestion, normalisation, matching, resolution and override are not audited |
+| R75 | Eight named endpoints under /api/v1 plus dashboard banks and timeline | `api/v1/{exceptions,audit,dashboard}.py` | `tests/integration/test_api.py` | PARTIAL: exceptions list/resolve, audit, dashboard summary done; runs (3), upload, banks, timeline missing |
+| R76 | Pydantic validation, API-key auth, rate limiting | `api/auth.py`, `api/v1/schemas/` | `test_api.py`, `test_route_protection.py` | PARTIAL: rate limiting not built |
+| R77 | Dashboard summary fields | `api/v1/dashboard.py` | `test_dashboard_summary_counts` | PARTIAL: no avg_processing_time or daily_trend |
+| R78 | Redis cache, 30 s TTL | none | none | MISSING |
+| R82 | OpenAPI docs | FastAPI auto-generation | none | PARTIAL: generated, not reviewed |
+| R85 | Four RBAC roles | `security/rbac.py`, `api/auth.py` | `test_route_protection.py`, `test_api.py` | PASS (resolve tiering is DD-14) |
+| Day 1 | `users` table | none | none | MISSING (DD-15) |
 
 ## Not yet started
 
