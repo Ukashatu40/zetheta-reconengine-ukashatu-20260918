@@ -255,6 +255,13 @@ Unverified or lower-impact: the "Section 26A" penalty citation could not be veri
 - **Fix:** order by `(txn_date, id)`.
 - **Test:** `test_pool_order_is_deterministic_regardless_of_insertion_order`.
 
+### IB-09: the route-protection test checked zero routes, and the role gate had no direct test (fixed)
+
+- **What:** the guard filtered `app.routes` for `APIRoute`; this FastAPI version wraps included routers in `_IncludedRouter`, so it matched nothing. The failing "not vacuous" assertion was commented out instead of investigated. Separately, disabling the 403 in `RoleRequirement` left all 152 integration tests passing, because `resolve_exception` re-checks roles itself and every read endpoint allows all roles.
+- **Found by:** mutation check (disabling the 403), not by a failing test.
+- **Fix:** route protection is now checked through the OpenAPI document and real anonymous requests; `RoleRequirement` has a direct parametrised test of every role pair.
+- **Tests:** `test_every_operation_rejects_an_anonymous_request`, `test_role_requirement_allows_only_equal_or_higher_roles`.
+
 ---
 
 ## DD: design and scope decisions

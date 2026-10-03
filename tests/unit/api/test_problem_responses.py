@@ -11,13 +11,14 @@ from recon.api.deps import get_db
 from recon.api.main import app
 
 
+def _unused_db() -> Session:
+    """Stands in for get_db. Never queried: authentication fails first."""
+    return Session()
+
+
 @pytest.fixture()
 def client() -> Iterator[TestClient]:
-    # Use an explicitly typed function wrapper to satisfy Mypy and FastAPI callables
-    def mock_db_callable() -> object:
-        return Session
-
-    app.dependency_overrides[get_db] = mock_db_callable
+    app.dependency_overrides[get_db] = _unused_db
     try:
         yield TestClient(app)
     finally:
