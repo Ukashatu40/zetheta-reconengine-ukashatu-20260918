@@ -14,7 +14,7 @@
 POSTGRES_PASSWORD := $(shell grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2)
 
 .PHONY: up down build migrate migrate-test psql psql-test \
-        fmt lint typecheck test test-integration check
+        fmt lint typecheck test test-integration check api-key
 
 up:
 	docker compose up -d
@@ -41,6 +41,9 @@ migrate-test:
 	docker compose exec \
 		-e DATABASE_URL="postgresql+psycopg://recon_app:$(POSTGRES_PASSWORD)@postgres:5432/recon_test" \
 		api alembic upgrade head
+
+api-key:
+	docker compose exec api python -m recon.cli.create_api_key --name $(NAME) --role $(ROLE)
 
 psql:
 	docker compose exec postgres psql -U recon_app -d recon
