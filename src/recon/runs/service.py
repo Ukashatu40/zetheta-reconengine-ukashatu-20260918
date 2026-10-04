@@ -108,17 +108,25 @@ class RunService:
         if run is None or run.status != "RUNNING":
             raise RunStateError(f"run {run_id} is not RUNNING")
         bank_code = run.bank_code
+        stale_days = self._settings.stale_after_days(bank_code)
+        now = self._clock()
         try:
             outcome = MatchingOrchestrator(
                 self._session,
                 str(run_id),
-                self._settings.blocking,
+                self._settings.blocking_for(bank_code),
                 self._settings.amount_tolerance_minor,
                 self._settings.matching,
             ).run(bank_code)
             classified = ExceptionClassifier(
                 self._session, self._settings.taxonomy, AuditLogger(self._session)
-            ).classify_unmatched(bank_code, str(run_id), self._clock())
+            ).classify_unmatched(
+                bank_code,
+                str(run_id),
+                now,
+                as_of_date=now.date() if stale_days is not None else None,
+                stale_after_days=stale_days,
+            )
         except Exception as exc:
             logger.exception("reconciliation run %s failed", run_id)
             self._session.rollback()  # discards matching and classification work only
