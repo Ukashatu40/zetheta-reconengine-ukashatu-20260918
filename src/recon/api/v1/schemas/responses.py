@@ -147,6 +147,8 @@ class MatchResultOut(BaseModel):
     matched_on_date: date
     created_at: datetime
     weights_version: str | None
+    reviewed_by: str | None
+    reviewed_at: datetime | None
 
 
 class UploadOut(BaseModel):
@@ -164,3 +166,15 @@ class UploadOut(BaseModel):
     normalised_count: int
     normalisation_failed_count: int
     exceptions_created: int
+
+
+class ConfirmRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class RejectRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    reason: str = Field(min_length=1, max_length=2000)

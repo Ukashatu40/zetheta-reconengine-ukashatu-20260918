@@ -9,7 +9,8 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
-from recon.persistence.models import IngestionFile, NormalisedTransaction
+from recon.matching.claims import ClaimsService
+from recon.persistence.models import IngestionFile, MatchResult, NormalisedTransaction
 
 
 def make_ingestion_file(session: Session, **overrides: object) -> IngestionFile:
@@ -55,3 +56,38 @@ def make_txn(ingestion_file_id: uuid.UUID, **overrides: object) -> NormalisedTra
     }
     defaults.update(overrides)
     return NormalisedTransaction(**defaults)
+
+
+def make_pending_review_pair(
+    session: Session,
+) -> tuple[NormalisedTransaction, NormalisedTransaction, MatchResult]:
+    """Two unmatched transactions held by a PENDING_REVIEW result with both claims ACTIVE,
+    exactly as the fuzzy strategy leaves a review-band pair."""
+    ingestion_file = make_ingestion_file(session)
+    internal = make_txn(ingestion_file.id, source="INTERNAL")
+    external = make_txn(
+        ingestion_file.id, source="EXTERNAL", id=uuid.uuid4(), raw_transaction_id=uuid.uuid4()
+    )
+    session.add_all([internal, external])
+    session.flush()
+    claims = ClaimsService(session)
+    internal_claim, external_claim = claims.claim_pair(internal.id, external.id)
+    result = MatchResult(
+        run_id="review-test",
+        match_type="FUZZY",
+        status="PENDING_REVIEW",
+        confidence=Decimal("0.877"),
+        internal_transaction_id=internal.id,
+        external_transaction_id=external.id,
+        field_scores={},
+        matched_fields={},
+        hard_constraints_passed=True,
+        candidate_count=1,
+        rationale="seeded for review tests",
+        matched_on_date=date(2026, 3, 15),
+    )
+    session.add(result)
+    session.flush()
+    claims.finalise(internal_claim, result.id)
+    claims.finalise(external_claim, result.id)
+    return internal, external, result

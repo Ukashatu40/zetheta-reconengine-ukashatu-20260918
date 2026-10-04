@@ -3,3 +3,4 @@
 
 EXCEPTIONS_CHAIN = "exceptions"
 INGESTION_CHAIN = "ingestion"
+MATCHING_CHAIN = "matching"
