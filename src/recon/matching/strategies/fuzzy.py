@@ -18,6 +18,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from recon.config.matching_models import MatchingConfig
@@ -63,10 +64,15 @@ class FuzzyMatchingStrategy:
         skipped_conflicts = 0
         result_ids: list[uuid.UUID] = []
         consumed: set[uuid.UUID] = set()
+        rejected = self._rejected_pairs(internal_candidates)
 
         for external_txn in external_candidates:
             candidate_set = generator.generate(external_txn)
-            available = [c for c in candidate_set.candidates if c.id not in consumed]
+            available = [
+                c
+                for c in candidate_set.candidates
+                if c.id not in consumed and (c.id, external_txn.id) not in rejected
+            ]
             best = self._best_candidate(external_txn, available)
 
             if best is None or best.decision == MatchDecision.NO_MATCH:
@@ -146,3 +152,21 @@ class FuzzyMatchingStrategy:
             rationale=scored.rationale,
             matched_on_date=scored.external_txn.txn_date,
         )
+
+    def _rejected_pairs(
+        self, internal_candidates: list[NormalisedTransaction]
+    ) -> set[tuple[uuid.UUID, uuid.UUID]]:
+        """(internal, external) pairs a human has rejected; never proposed again."""
+        ids = [t.id for t in internal_candidates]
+        pairs: set[tuple[uuid.UUID, uuid.UUID]] = set()
+        for start in range(0, len(ids), 5000):
+            rows = self._session.execute(
+                select(
+                    MatchResult.internal_transaction_id, MatchResult.external_transaction_id
+                ).where(
+                    MatchResult.status == "REJECTED",
+                    MatchResult.internal_transaction_id.in_(ids[start : start + 5000]),
+                )
+            )
+            pairs.update((row[0], row[1]) for row in rows)
+        return pairs

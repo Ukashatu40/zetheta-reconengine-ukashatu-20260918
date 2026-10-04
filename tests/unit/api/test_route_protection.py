@@ -6,6 +6,7 @@ every operation must be answered 401."""
 
 from __future__ import annotations
 
+import re
 import uuid
 from collections.abc import Iterator
 
@@ -57,7 +58,7 @@ def test_every_operation_declares_the_api_key_scheme(method: str, path: str) -> 
 def test_every_operation_rejects_an_anonymous_request(
     client: TestClient, method: str, path: str
 ) -> None:
-    url = path.replace("{exception_id}", str(uuid.uuid4()))
+    url = re.sub(r"\{[^}]+\}", str(uuid.uuid4()), path)
     response = client.request(
         method.upper(), url, json={} if method in {"post", "put", "patch"} else None
     )
