@@ -39,6 +39,7 @@ from recon.ingestion.upload import (
     save_stream,
 )
 from recon.persistence.models import IngestionFile
+from recon.persistence.repositories.ingestion import DuplicateFileError
 from recon.runs.settings import RunSettings
 
 logger = logging.getLogger("recon.upload")
@@ -138,6 +139,11 @@ def upload_file(
         raise HTTPException(
             status_code=409,
             detail="upload conflicted with existing data (possibly a concurrent upload)",
+        ) from exc
+    except DuplicateFileError as exc:
+        _discard(session, saved.path)
+        raise HTTPException(
+            status_code=409, detail="a file with identical content was already ingested"
         ) from exc
     except ValueError as exc:
         _discard(session, saved.path)
