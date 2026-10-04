@@ -8,7 +8,7 @@ FastAPI runs cleanup code relative to sending the response.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from datetime import UTC, datetime
 from typing import Annotated
 
@@ -30,5 +30,10 @@ def get_now() -> datetime:
     return datetime.now(UTC)
 
 
+def get_clock() -> Callable[[], datetime]:
+    return lambda: datetime.now(UTC)
+
+
 SessionDep = Annotated[Session, Depends(get_db)]
 NowDep = Annotated[datetime, Depends(get_now)]
+ClockDep = Annotated[Callable[[], datetime], Depends(get_clock)]

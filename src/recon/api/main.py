@@ -14,7 +14,7 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from recon.api.errors import problem_response, request_id_of
-from recon.api.v1 import audit, dashboard, exceptions
+from recon.api.v1 import audit, dashboard, exceptions, runs
 
 logger = logging.getLogger("recon.api")
 _REQUEST_ID_PATTERN = re.compile(r"[A-Za-z0-9._-]{1,64}")
@@ -74,3 +74,4 @@ def health_ready() -> dict[str, str]:
 app.include_router(exceptions.router)
 app.include_router(audit.router)
 app.include_router(dashboard.router)
+app.include_router(runs.router)
