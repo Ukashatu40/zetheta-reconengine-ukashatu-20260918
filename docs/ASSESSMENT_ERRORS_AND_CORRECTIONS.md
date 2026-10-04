@@ -192,6 +192,14 @@ instruction, not on an external source.
 - **Correction:** auto-resolve when the difference is at most `amount_mismatch_max_difference_minor` (default 1 minor unit).
 - **Status:** Implemented. **Test:** `test_amount_mismatch_auto_resolves_only_within_one_minor_unit`.
 
+### AE-37: the Jaro-Winkler 0.92 cutoff lets sequential identifiers auto-match
+
+- **PDF (A3.4):** reference similarity above 0.92 scores as a match.
+- **Problem:** `REF002` and `REF003` score about 0.933. With equal amount and date, confidence is about 0.877 with three clearing signals, an auto-match. Different payments with consecutive references, the same amount and the same day (payroll batches) are plausible.
+- **Correction:** two references of equal length that differ only in digits cannot auto-match unless the counterparty also clears its threshold; the pair is written PENDING_REVIEW.
+- **Limits:** fixed in code, not configurable (a config change needs a schema change). Truncation, length differences and letter differences are not covered. A genuine one-digit typo with no counterparty now goes to review, which raises review volume.
+- **Status:** Implemented. **Tests:** `test_references_differing_only_in_digits_do_not_auto_match_without_corroboration`, `test_digit_only_reference_variance_with_a_matching_counterparty_still_auto_matches`, `test_digit_only_reference_variance_without_counterparty_is_held_for_review`.
+
 ### Other Phase 0 observations, not yet individually numbered
 
 Unverified or lower-impact: the "Section 26A" penalty citation could not be verified; community PostgreSQL has no TDE, so encryption at rest is volume-level; the Paytm deadline was extended from 29 February to 15 March 2024; subset-sum is many-to-one, not many-to-many, so netted matching will be a bounded heuristic.
