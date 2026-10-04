@@ -262,6 +262,13 @@ Unverified or lower-impact: the "Section 26A" penalty citation could not be veri
 - **Fix:** route protection is now checked through the OpenAPI document and real anonymous requests; `RoleRequirement` has a direct parametrised test of every role pair.
 - **Tests:** `test_every_operation_rejects_an_anonymous_request`, `test_role_requirement_allows_only_equal_or_higher_roles`.
 
+### IB-10: config paths derived from the package location broke in the installed image (fixed)
+
+- **What:** modules built config paths with `Path(__file__).resolve().parents[3] / "config"`. That is the repo root in a source checkout, but `/opt/venv/lib/python3.11` in the Docker image, so `/reconcile` and `/upload` failed with `FileNotFoundError`.
+- **Found by:** a manual container smoke test. The test suite runs against an editable install and could not see it.
+- **Fix:** `recon.paths.config_dir()` (env override, then working directory, then source checkout); no module derives config paths from its own location.
+- **Follow-up:** the CI increment adds a scripted container smoke test, so this class of failure is checked on every change.
+
 ---
 
 ## DD: design and scope decisions

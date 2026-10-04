@@ -8,9 +8,9 @@ import yaml
 
 from recon.domain.enums import EscalationTier, ExceptionCategory, ExceptionSeverity
 from recon.excmgmt.taxonomy import (
-    DEFAULT_TAXONOMY_PATH,
     AutoResolvable,
     TaxonomyConfigError,
+    default_taxonomy_path,
     load_taxonomy,
 )
 
@@ -45,7 +45,7 @@ def test_direction_reversal_applies_the_ae03_correction() -> None:
 
 
 def test_missing_category_is_rejected(tmp_path: Path) -> None:
-    data = yaml.safe_load(DEFAULT_TAXONOMY_PATH.read_text())
+    data = yaml.safe_load(default_taxonomy_path().read_text())
     data["categories"] = data["categories"][1:]
     path = tmp_path / "bad.yaml"
     path.write_text(yaml.safe_dump(data))
@@ -54,7 +54,7 @@ def test_missing_category_is_rejected(tmp_path: Path) -> None:
 
 
 def test_duplicate_category_is_rejected(tmp_path: Path) -> None:
-    data = yaml.safe_load(DEFAULT_TAXONOMY_PATH.read_text())
+    data = yaml.safe_load(default_taxonomy_path().read_text())
     data["categories"].append(data["categories"][0])
     path = tmp_path / "bad.yaml"
     path.write_text(yaml.safe_dump(data))
