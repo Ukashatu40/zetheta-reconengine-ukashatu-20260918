@@ -24,6 +24,7 @@ from recon.config.registry import default_bank_configs
 from recon.ingestion.normalisation_service import NormalisationResult
 from recon.ingestion.service import IngestionResult
 from recon.persistence.models import ApiKey, AuditLog, IngestionFile
+from recon.persistence.repositories.ingestion import DuplicateFileError
 from recon.security.api_keys import generate_api_key, hash_api_key
 from recon.security.rbac import Role
 from tests.integration.factories import make_ingestion_file
@@ -216,3 +217,22 @@ def test_a_processing_failure_is_422_and_rolls_back_and_deletes_the_file(
     assert "secret" not in response.text
     assert _files(upload_dir) == []
     assert db_session.query(IngestionFile).count() == 0
+
+
+class _DuplicateRaisingIngestion:
+    def __init__(self, session: Session, ingested_by: str) -> None:
+        pass
+
+    def ingest_file(self, path: Path, config: object, format_type: str) -> IngestionResult:
+        raise DuplicateFileError("a" * 64, uuid.uuid4())
+
+
+def test_a_duplicate_detected_during_ingestion_is_409_not_422(
+    client: TestClient, db_session: Session, upload_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The race the hash pre-check cannot close: another upload wins between
+    the check and the insert."""
+    monkeypatch.setattr("recon.api.v1.upload.IngestionService", _DuplicateRaisingIngestion)
+    response = _post(client, _headers(db_session, Role.ANALYST))
+    assert response.status_code == 409
+    assert _files(upload_dir) == []
