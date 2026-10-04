@@ -16,10 +16,11 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic import ValidationError as PydanticValidationError
 
 from recon.domain.enums import EscalationTier, ExceptionCategory, ExceptionSeverity
+from recon.paths import config_dir
 
-DEFAULT_TAXONOMY_PATH = (
-    Path(__file__).resolve().parents[3] / "config" / "exceptions" / "taxonomy.yaml"
-)
+
+def default_taxonomy_path() -> Path:
+    return config_dir() / "exceptions" / "taxonomy.yaml"
 
 
 class TaxonomyConfigError(ValueError):
@@ -93,7 +94,8 @@ class TaxonomyConfig(BaseModel):
         raise LookupError(f"no rule for {category}")  # unreachable after validation
 
 
-def load_taxonomy(path: Path = DEFAULT_TAXONOMY_PATH) -> TaxonomyConfig:
+def load_taxonomy(path: Path | None = None) -> TaxonomyConfig:
+    path = path if path is not None else default_taxonomy_path()
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise TaxonomyConfigError(f"{path}: expected a YAML mapping at the top level")

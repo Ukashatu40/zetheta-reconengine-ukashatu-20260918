@@ -13,8 +13,7 @@ from jsonschema import Draft202012Validator
 from pydantic import ValidationError as PydanticValidationError
 
 from recon.config.matching_models import MatchingConfig
-
-_SCHEMA_PATH = Path(__file__).resolve().parents[3] / "config" / "matching" / "_schema.json"
+from recon.paths import config_dir
 
 
 class MatchingConfigError(ValueError):
@@ -22,7 +21,8 @@ class MatchingConfigError(ValueError):
 
 
 def _load_schema() -> dict[str, Any]:
-    return cast(dict[str, Any], json.loads(_SCHEMA_PATH.read_text(encoding="utf-8")))
+    schema_path = config_dir() / "matching" / "_schema.json"
+    return cast(dict[str, Any], json.loads(schema_path.read_text(encoding="utf-8")))
 
 
 def load_matching_config(path: Path) -> MatchingConfig:

@@ -8,15 +8,15 @@ from pathlib import Path
 
 from recon.config.loader import load_bank_config
 from recon.config.models import BankConfig
-
-DEFAULT_BANKS_DIR = Path(__file__).resolve().parents[3] / "config" / "banks"
+from recon.paths import config_dir
 
 
 class DuplicateBankCodeError(ValueError):
     """Two config files declare the same bank_code."""
 
 
-def load_bank_configs(directory: Path = DEFAULT_BANKS_DIR) -> dict[str, BankConfig]:
+def load_bank_configs(directory: Path | None = None) -> dict[str, BankConfig]:
+    directory = directory if directory is not None else config_dir() / "banks"
     configs: dict[str, BankConfig] = {}
     for path in sorted(directory.glob("*.yaml")):
         if path.name.startswith("_"):
