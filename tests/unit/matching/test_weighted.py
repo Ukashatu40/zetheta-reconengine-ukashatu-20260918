@@ -295,3 +295,41 @@ def test_a_looser_review_threshold_changes_the_decision() -> None:
     )
     assert loose_result.decision == MatchDecision.REVIEW
     assert loose_result.weights_version == "weights.v2-test"
+
+
+def test_references_differing_only_in_digits_do_not_auto_match_without_corroboration() -> None:
+    """AE-37: consecutive identifiers with equal amount and date must not auto-match."""
+    internal = _txn(normalised_reference="REF002")
+    external = _txn(id=uuid.uuid4(), source="EXTERNAL", normalised_reference="REF003")
+
+    scored = score_candidate(
+        internal, external, amount_tolerance_minor=100, config=_default_config()
+    )
+
+    assert scored.confidence > 0.85
+    assert scored.decision == MatchDecision.REVIEW
+
+
+def test_digit_only_variance_with_a_matching_counterparty_still_auto_matches() -> None:
+    internal = _txn(normalised_reference="REF002", counterparty_name_normalised="ACME CORPORATION")
+    external = _txn(
+        id=uuid.uuid4(),
+        source="EXTERNAL",
+        normalised_reference="REF003",
+        counterparty_name_normalised="ACME CORPORATION",
+    )
+
+    scored = score_candidate(
+        internal, external, amount_tolerance_minor=100, config=_default_config()
+    )
+
+    assert scored.decision == MatchDecision.AUTO_MATCH
+
+
+def test_decide_holds_an_uncorroborated_digit_variance_for_review() -> None:
+    thresholds = _default_config().thresholds
+    held, rationale = _decide(0.90, True, 3, thresholds, uncorroborated_digit_variance=True)
+    allowed, _ = _decide(0.90, True, 3, thresholds, uncorroborated_digit_variance=False)
+    assert held == MatchDecision.REVIEW
+    assert "digits" in rationale
+    assert allowed == MatchDecision.AUTO_MATCH

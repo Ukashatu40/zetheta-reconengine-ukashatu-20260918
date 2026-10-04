@@ -134,15 +134,18 @@ def test_transactions_exact_cannot_match_fall_through_to_fuzzy(db_session: Sessi
     proving levels compose, not just that exact runs first in isolation."""
     ingestion_file = _make_ingestion_file(db_session)
     internal_txn = _make_txn(
-        ingestion_file.id, source="INTERNAL", normalised_reference="REF0001234567"
+        ingestion_file.id,
+        source="INTERNAL",
+        normalised_reference="REF0001234567",
+        counterparty_name_normalised="ACME CORPORATION",
     )
     external_txn = _make_txn(
         ingestion_file.id,
         source="EXTERNAL",
         id=uuid.uuid4(),
         raw_transaction_id=uuid.uuid4(),
-        normalised_reference="REF0001234568",  # one character different -> exact key differs
-        counterparty_name_normalised=None,
+        normalised_reference="REF0001234568",
+        counterparty_name_normalised="ACME CORPORATION",
     )
     db_session.add_all([internal_txn, external_txn])
     db_session.flush()
@@ -256,7 +259,7 @@ def test_match_rates_are_reported_separately_and_review_rows_are_excluded(
         id=uuid.uuid4(),
         raw_transaction_id=uuid.uuid4(),
         normalised_reference="REF0002234567",
-        counterparty_name_normalised=None,
+        counterparty_name_normalised="ACME CORPORATION",
     )
     fuzzy_external = _make_txn(
         ingestion_file.id,
@@ -264,7 +267,7 @@ def test_match_rates_are_reported_separately_and_review_rows_are_excluded(
         id=uuid.uuid4(),
         raw_transaction_id=uuid.uuid4(),
         normalised_reference="REF0002234568",
-        counterparty_name_normalised=None,
+        counterparty_name_normalised="ACME CORPORATION",
     )
     db_session.add_all([exact_internal, exact_external, fuzzy_internal, fuzzy_external])
     db_session.flush()
@@ -338,3 +341,32 @@ def test_pair_held_for_review_by_an_earlier_run_does_not_block_a_free_candidate(
     assert new_external.match_status == "MATCHED"
     assert free_internal.match_status == "MATCHED"
     assert held_internal.match_status == "UNMATCHED"
+
+
+def test_digit_only_reference_variance_without_counterparty_is_held_for_review(
+    db_session: Session,
+) -> None:
+    """AE-37: an uncorroborated one-digit difference is claimed and queued, not matched."""
+    f = _make_ingestion_file(db_session)
+    internal = _make_txn(f.id, source="INTERNAL", normalised_reference="REF0001234567")
+    external = _make_txn(
+        f.id,
+        source="EXTERNAL",
+        id=uuid.uuid4(),
+        raw_transaction_id=uuid.uuid4(),
+        normalised_reference="REF0001234568",
+    )
+    db_session.add_all([internal, external])
+    db_session.flush()
+
+    outcome = MatchingOrchestrator(
+        db_session,
+        run_id="test-ae37",
+        blocking_config=_blocking_config(),
+        amount_tolerance_minor=100,
+        matching_config=_default_config(),
+    ).run(bank_code="HDFC")
+
+    assert (outcome.fuzzy.auto_matched_count, outcome.fuzzy.review_count) == (0, 1)
+    assert internal.match_status == "UNMATCHED"
+    assert external.match_status == "UNMATCHED"

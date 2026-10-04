@@ -23,6 +23,7 @@ from enum import StrEnum
 
 from recon.config.matching_models import MatchingConfig, MatchingThresholds
 from recon.matching.scoring.fields import (
+    differs_only_in_digits,
     score_amount,
     score_counterparty,
     score_date,
@@ -111,7 +112,19 @@ def score_candidate(
         ]
     )
 
-    decision, rationale = _decide(confidence, hard_constraints_passed, independent_signal_count, t)
+    uncorroborated_digit_variance = (
+        differs_only_in_digits(
+            internal_txn.normalised_reference or "", external_txn.normalised_reference or ""
+        )
+        and counterparty_score < t.counterparty_token_set_ratio
+    )
+    decision, rationale = _decide(
+        confidence,
+        hard_constraints_passed,
+        independent_signal_count,
+        t,
+        uncorroborated_digit_variance=uncorroborated_digit_variance,
+    )
 
     return ScoredCandidate(
         internal_txn=internal_txn,
@@ -131,22 +144,31 @@ def _decide(
     hard_constraints_passed: bool,
     independent_signal_count: int,
     thresholds: MatchingThresholds,
+    *,
+    uncorroborated_digit_variance: bool = False,
 ) -> tuple[MatchDecision, str]:
     if not hard_constraints_passed:
         return MatchDecision.NO_MATCH, "Hard constraint failed (direction or currency mismatch)."
 
     if confidence > thresholds.auto_match_confidence:
-        if independent_signal_count >= thresholds.min_independent_signals_for_auto_match:
+        if independent_signal_count < thresholds.min_independent_signals_for_auto_match:
             return (
-                MatchDecision.AUTO_MATCH,
-                f"Confidence {confidence:.3f} exceeded {thresholds.auto_match_confidence} with "
-                f"{independent_signal_count} independent signals clearing their own thresholds.",
+                MatchDecision.REVIEW,
+                f"Confidence {confidence:.3f} exceeded {thresholds.auto_match_confidence} but only "
+                f"{independent_signal_count} independent signal(s) cleared their own threshold "
+                f"(AE-09: minimum {thresholds.min_independent_signals_for_auto_match} required).",
+            )
+        if uncorroborated_digit_variance:
+            return (
+                MatchDecision.REVIEW,
+                f"Confidence {confidence:.3f} exceeded {thresholds.auto_match_confidence} but the "
+                "references differ only in digits and no counterparty corroborates; sequential "
+                "identifiers cannot be told from typos (AE-37).",
             )
         return (
-            MatchDecision.REVIEW,
-            f"Confidence {confidence:.3f} exceeded {thresholds.auto_match_confidence} but only "
-            f"{independent_signal_count} independent signal(s) cleared their own threshold "
-            f"(AE-09: minimum {thresholds.min_independent_signals_for_auto_match} required).",
+            MatchDecision.AUTO_MATCH,
+            f"Confidence {confidence:.3f} exceeded {thresholds.auto_match_confidence} with "
+            f"{independent_signal_count} independent signals clearing their own thresholds.",
         )
 
     if confidence >= thresholds.review_confidence:

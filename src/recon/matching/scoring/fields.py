@@ -17,6 +17,22 @@ _SAME_DAY = 0
 _T_PLUS_ONE = 1
 _T_PLUS_TWO = 2
 
+_ASCII_DIGITS = frozenset("0123456789")
+
+
+def differs_only_in_digits(first: str, second: str) -> bool:
+    """True when two different references have equal length and every
+    differing position holds a digit on both sides (AE-37). Sequential
+    identifiers and one-digit typos both look like this; text alone cannot
+    tell them apart. Truncation, length changes and letter differences are
+    deliberately not covered."""
+    if first == second or len(first) != len(second):
+        return False
+    return all(
+        a == b or (a in _ASCII_DIGITS and b in _ASCII_DIGITS)
+        for a, b in zip(first, second, strict=True)
+    )
+
 
 def score_reference(
     internal_ref: str,
