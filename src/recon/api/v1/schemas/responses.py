@@ -147,3 +147,20 @@ class MatchResultOut(BaseModel):
     matched_on_date: date
     created_at: datetime
     weights_version: str | None
+
+
+class UploadOut(BaseModel):
+    ingestion_file_id: uuid.UUID
+    bank_code: str
+    format_type: str
+    source: str
+    original_filename: str
+    size_bytes: int
+    content_sha256: str
+    status: str
+    record_count: int
+    parsed_count: int
+    error_count: int
+    normalised_count: int
+    normalisation_failed_count: int
+    exceptions_created: int

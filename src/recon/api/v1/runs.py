@@ -49,10 +49,13 @@ def start_reconciliation(
     idempotency_key: IdempotencyKey,
     session: SessionDep,
     *,
+    settings: Annotated[RunSettings, Depends(get_run_settings)],
     service: RunServiceDep,
     principal: Annotated[Principal, Depends(require_analyst)],
     response: Response,
 ) -> RunOut:
+    if body.bank_code not in settings.banks:
+        raise HTTPException(status_code=422, detail=f"unknown bank_code {body.bank_code!r}")
     try:
         started = service.start(
             bank_code=body.bank_code, idempotency_key=idempotency_key, requested_by=principal.name
