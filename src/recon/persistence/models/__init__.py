@@ -15,6 +15,7 @@ from recon.persistence.models.ingestion import IngestionFile, RawTransaction
 from recon.persistence.models.match_results import MatchResult
 from recon.persistence.models.matching import MatchClaim
 from recon.persistence.models.normalised import NormalisedTransaction
+from recon.persistence.models.runs import ReconciliationRun
 from recon.persistence.models.security import ApiKey
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "NormalisedTransaction",
     "RawTransaction",
     "ReconException",
+    "ReconciliationRun",
 ]

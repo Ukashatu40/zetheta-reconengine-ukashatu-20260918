@@ -5,7 +5,7 @@ strings, so no money value passes through a float."""
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Generic, Literal, TypeVar
 
@@ -109,3 +109,41 @@ class DashboardSummary(BaseModel):
     sla_breached_open_count: int
     exceptions_by_category: dict[str, int]
     exceptions_by_severity: dict[str, int]
+
+
+class ReconcileRequest(BaseModel):
+    bank_code: str = Field(pattern=r"^[A-Z0-9_]{2,20}$")
+
+
+class RunOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    bank_code: str
+    status: str
+    requested_by: str
+    created_at: datetime
+    started_at: datetime | None
+    completed_at: datetime | None
+    metrics: dict[str, Any] | None
+    error_summary: str | None
+
+
+class MatchResultOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    match_type: str
+    status: str
+    confidence: Decimal
+    internal_transaction_id: uuid.UUID
+    external_transaction_id: uuid.UUID
+    field_scores: dict[str, Any]
+    matched_fields: dict[str, Any]
+    hard_constraints_passed: bool
+    rule_id: str | None
+    candidate_count: int
+    rationale: str
+    matched_on_date: date
+    created_at: datetime
+    weights_version: str | None
