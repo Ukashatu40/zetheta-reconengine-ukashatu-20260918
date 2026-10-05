@@ -35,6 +35,7 @@ class BenchmarkReport:
     orchestrator_seconds: float
     evaluation: Evaluation
     profile: ProfileSummary | None = None
+    set_based_exact: bool = False
 
     @property
     def auto_matches_per_second(self) -> float | None:
@@ -73,6 +74,7 @@ class BenchmarkReport:
             },
             "per_scenario": ev.per_scenario,
             "profile": asdict(self.profile) if self.profile is not None else None,
+            "set_based_exact": self.set_based_exact,
         }
 
 
@@ -105,7 +107,7 @@ def _row(record: SyntheticRecord, ingestion_file_id: uuid.UUID) -> dict[str, obj
     }
 
 
-def _insert(session: Session, records: list[SyntheticRecord]) -> None:
+def insert_records(session: Session, records: list[SyntheticRecord]) -> None:
     ingestion_file = IngestionFile(
         bank_code=BANK_CODE,
         format_type="CSV",
@@ -122,13 +124,18 @@ def _insert(session: Session, records: list[SyntheticRecord]) -> None:
 
 
 def run_benchmark(
-    session: Session, *, size: int, seed: int, profile: StatementProfile | None = None
+    session: Session,
+    *,
+    size: int,
+    seed: int,
+    profile: StatementProfile | None = None,
+    set_based_exact: bool = False,
 ) -> BenchmarkReport:
     records = generate(size, seed)
     run_id = f"bench-{seed}-{size}-{uuid.uuid4().hex[:8]}"
 
     started = time.monotonic()
-    _insert(session, records)
+    insert_records(session, records)
     insert_seconds = time.monotonic() - started
 
     orchestrator = MatchingOrchestrator(
@@ -137,6 +144,7 @@ def run_benchmark(
         BlockingConfig(amount_bucket_width_minor=10_000, date_window_days=2),
         100,
         load_matching_config(config_dir() / "matching" / "weights.yaml"),
+        set_based_exact=set_based_exact,
     )
     if profile is not None:
         profile.attach(session.connection())
