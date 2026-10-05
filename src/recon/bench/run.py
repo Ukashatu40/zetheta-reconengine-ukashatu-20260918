@@ -17,6 +17,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
+from recon.bench.profiling import StatementProfile
 from recon.bench.runner import BenchmarkReport, run_benchmark
 
 
@@ -37,6 +38,19 @@ def _print(report: BenchmarkReport) -> None:
     print("per scenario (by each entity's primary record):")
     for scenario, labels in sorted(ev.per_scenario.items()):
         print(f"  {scenario:24s} {dict(sorted(labels.items()))}")
+    if report.profile is not None:
+        p = report.profile
+        per = (
+            "n/a"
+            if p.statements_per_persisted_result is None
+            else f"{p.statements_per_persisted_result:.1f}"
+        )
+        print(
+            f"profile: {p.statements} statements ({per} per persisted result); "
+            f"{p.db_wait_seconds:.2f}s inside cursor.execute of {report.orchestrator_seconds:.2f}s total"
+        )
+        for kind, count in list(p.by_statement.items())[:12]:
+            print(f"  {count:8d}  {kind}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -45,6 +59,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--database-url", default=None)
     parser.add_argument("--output", type=Path, default=None, help="write the report as JSON")
+    parser.add_argument(
+        "--profile", action="store_true", help="count SQL statements and DB wait time"
+    )
     args = parser.parse_args(argv)
 
     url = args.database_url or os.environ.get("TEST_DATABASE_URL")
@@ -60,7 +77,12 @@ def main(argv: list[str] | None = None) -> int:
         transaction = connection.begin()
         try:
             with Session(bind=connection, join_transaction_mode="create_savepoint") as session:
-                report = run_benchmark(session, size=args.size, seed=args.seed)
+                report = run_benchmark(
+                    session,
+                    size=args.size,
+                    seed=args.seed,
+                    profile=StatementProfile() if args.profile else None,
+                )
         finally:
             transaction.rollback()
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from recon.bench.dataset import SyntheticRecord, generate
 from recon.bench.evaluate import Evaluation, MatchOutcome, evaluate
+from recon.bench.profiling import ProfileSummary, StatementProfile
 from recon.config.matching_loader import load_matching_config
 from recon.matching.blocking.candidates import BlockingConfig
 from recon.matching.orchestrator import MatchingOrchestrator
@@ -33,6 +34,7 @@ class BenchmarkReport:
     fuzzy_seconds: float
     orchestrator_seconds: float
     evaluation: Evaluation
+    profile: ProfileSummary | None = None
 
     @property
     def auto_matches_per_second(self) -> float | None:
@@ -70,6 +72,7 @@ class BenchmarkReport:
                 "exact_rate_of_true_pairs": ev.exact_rate_of_true_pairs,
             },
             "per_scenario": ev.per_scenario,
+            "profile": asdict(self.profile) if self.profile is not None else None,
         }
 
 
@@ -118,7 +121,9 @@ def _insert(session: Session, records: list[SyntheticRecord]) -> None:
         session.execute(insert(NormalisedTransaction), [_row(r, ingestion_file.id) for r in chunk])
 
 
-def run_benchmark(session: Session, *, size: int, seed: int) -> BenchmarkReport:
+def run_benchmark(
+    session: Session, *, size: int, seed: int, profile: StatementProfile | None = None
+) -> BenchmarkReport:
     records = generate(size, seed)
     run_id = f"bench-{seed}-{size}-{uuid.uuid4().hex[:8]}"
 
@@ -126,13 +131,20 @@ def run_benchmark(session: Session, *, size: int, seed: int) -> BenchmarkReport:
     _insert(session, records)
     insert_seconds = time.monotonic() - started
 
-    result = MatchingOrchestrator(
+    orchestrator = MatchingOrchestrator(
         session,
         run_id,
         BlockingConfig(amount_bucket_width_minor=10_000, date_window_days=2),
         100,
         load_matching_config(config_dir() / "matching" / "weights.yaml"),
-    ).run(BANK_CODE)
+    )
+    if profile is not None:
+        profile.attach(session.connection())
+    try:
+        result = orchestrator.run(BANK_CODE)
+    finally:
+        if profile is not None:
+            profile.detach()
 
     rows = session.execute(
         select(
@@ -152,4 +164,5 @@ def run_benchmark(session: Session, *, size: int, seed: int) -> BenchmarkReport:
         fuzzy_seconds=result.metrics.fuzzy_duration_seconds,
         orchestrator_seconds=result.metrics.total_duration_seconds,
         evaluation=evaluate(records, outcomes),
+        profile=profile.summary(len(outcomes)) if profile is not None else None,
     )
