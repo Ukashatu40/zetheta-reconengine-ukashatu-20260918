@@ -1,0 +1,55 @@
+{
+  "auto_matches_per_second": 91.41845284366008,
+  "counts": {
+    "auto": 3900,
+    "auto_correct": 3900,
+    "exact_correct": 3400,
+    "external": 4650,
+    "false_auto_matches": 0,
+    "internal": 4750,
+    "review": 500,
+    "review_correct": 200,
+    "true_pairs": 4100
+  },
+  "per_scenario": {
+    "amount_drift": {
+      "auto_correct": 200
+    },
+    "date_shift": {
+      "auto_correct": 300
+    },
+    "exact": {
+      "auto_correct": 3100
+    },
+    "external_only": {
+      "unmatched": 250
+    },
+    "internal_only": {
+      "unmatched": 350
+    },
+    "sequential_decoy": {
+      "review_wrong": 300
+    },
+    "typo_counterparty": {
+      "auto_correct": 300
+    },
+    "typo_no_counterparty": {
+      "review_correct": 200
+    }
+  },
+  "rates": {
+    "auto_precision": 1.0,
+    "auto_rate_of_externals": 0.8387096774193549,
+    "auto_recall_of_true_pairs": 0.9512195121951219,
+    "exact_rate_of_externals": 0.7311827956989247,
+    "exact_rate_of_true_pairs": 0.8292682926829268
+  },
+  "seconds": {
+    "exact": 32.6713477979938,
+    "fuzzy": 9.989623577988823,
+    "insert": 2.424018485995475,
+    "orchestrator": 43.701802460011095
+  },
+  "seed": 42,
+  "size": 5000
+}
