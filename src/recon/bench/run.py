@@ -62,6 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--profile", action="store_true", help="count SQL statements and DB wait time"
     )
+    parser.add_argument("--set-based-exact", action="store_true")
     args = parser.parse_args(argv)
 
     url = args.database_url or os.environ.get("TEST_DATABASE_URL")
@@ -82,6 +83,7 @@ def main(argv: list[str] | None = None) -> int:
                     size=args.size,
                     seed=args.seed,
                     profile=StatementProfile() if args.profile else None,
+                    set_based_exact=args.set_based_exact,
                 )
         finally:
             transaction.rollback()
