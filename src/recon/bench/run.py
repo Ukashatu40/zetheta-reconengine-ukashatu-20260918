@@ -49,8 +49,8 @@ def _print(report: BenchmarkReport) -> None:
             f"profile: {p.statements} statements ({per} per persisted result); "
             f"{p.db_wait_seconds:.2f}s inside cursor.execute of {report.orchestrator_seconds:.2f}s total"
         )
-        for kind, count in list(p.by_statement.items())[:12]:
-            print(f"  {count:8d}  {kind}")
+        for kind, stat in list(p.by_statement.items())[:12]:
+            print(f"  {stat.count:8d}  {stat.seconds:8.2f}s  max {stat.max_seconds:7.3f}s  {kind}")
 
 
 def main(argv: list[str] | None = None) -> int:
