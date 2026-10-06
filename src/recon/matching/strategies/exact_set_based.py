@@ -16,7 +16,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-_PAIR_AND_CLAIM = text(r"""
+PAIR_AND_CLAIM_SQL = text(r"""
 WITH pool AS (
     SELECT t.id, t.source, t.normalised_reference AS reference, t.amount_minor,
            t.currency, t.direction, t.txn_date
@@ -83,6 +83,7 @@ SELECT (SELECT count(*) FROM inserted) AS matched,
        (SELECT count(*) FROM claims) AS claimed,
        (SELECT count(*) FROM updated) AS updated
 """)
+_PAIR_AND_CLAIM = text(str(PAIR_AND_CLAIM_SQL))
 
 
 class SetBasedExactError(RuntimeError):

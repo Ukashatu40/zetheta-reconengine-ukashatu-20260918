@@ -6,6 +6,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from recon.bench.dataset import generate
+from recon.bench.explain import explain
 from recon.bench.profiling import StatementProfile
 from recon.bench.runner import run_benchmark
 
@@ -38,6 +39,9 @@ def test_a_profile_counts_only_statements_inside_its_window(db_session: Session)
 
     assert sum(profile.counts.values()) == 2
     assert profile.db_seconds > 0
+    stat = profile.summary(1).by_statement["SELECT -"]
+    assert stat.count == 2
+    assert 0 < stat.max_seconds <= stat.seconds
     profile.detach()  # detaching twice is harmless
 
 
@@ -58,3 +62,9 @@ def test_profiled_benchmark_reports_statements_per_persisted_result(db_session: 
     assert report.profile.statements > 0
     assert report.profile.statements_per_persisted_result is not None
     assert any(kind.startswith("INSERT match_results") for kind in report.profile.by_statement)
+
+
+@pytest.mark.parametrize("analyze_first", [False, True])
+def test_explain_returns_a_plan_with_timings(db_session: Session, analyze_first: bool) -> None:
+    lines = explain(db_session, size=60, seed=1, analyze_first=analyze_first)
+    assert any(line.startswith("Execution Time") for line in lines)

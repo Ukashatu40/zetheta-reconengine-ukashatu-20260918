@@ -1,18 +1,17 @@
-# src/recon/bench/profiling.py
 """SQL statement profiling for benchmark runs.
 
 Counts the statements sent on one connection and the client-side time spent
 inside cursor.execute (round trip plus database time), grouped by verb and
-table. It exists to answer "where does the time go" from measurement.
-Statements are classified by first keyword; executemany counts as one
-statement carrying several parameter sets.
+table, with the slowest single statement of each kind. It exists to answer
+"where does the time go" from measurement. Statements are classified by first
+keyword; executemany counts as one statement carrying several parameter sets.
 """
 
 from __future__ import annotations
 
 import re
 import time
-from collections import Counter
+from collections import Counter, defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -36,17 +35,26 @@ def classify_statement(statement: str) -> tuple[str, str]:
 
 
 @dataclass(frozen=True, slots=True)
+class StatementStat:
+    count: int
+    seconds: float
+    max_seconds: float
+
+
+@dataclass(frozen=True, slots=True)
 class ProfileSummary:
     statements: int
     statements_per_persisted_result: float | None
     db_wait_seconds: float
-    by_statement: dict[str, int]
+    by_statement: dict[str, StatementStat]
 
 
 class StatementProfile:
     def __init__(self) -> None:
         self.counts: Counter[tuple[str, str]] = Counter()
         self.parameter_sets: Counter[tuple[str, str]] = Counter()
+        self.seconds: defaultdict[tuple[str, str], float] = defaultdict(float)
+        self.slowest: defaultdict[tuple[str, str], float] = defaultdict(float)
         self.db_seconds = 0.0
         self._connection: Connection | None = None
         # Kept as attributes: event.remove needs the same function objects that were registered.
@@ -69,13 +77,21 @@ class StatementProfile:
 
     def summary(self, persisted_results: int) -> ProfileSummary:
         total = sum(self.counts.values())
+        ordered = sorted(self.counts, key=lambda key: (-self.seconds[key], key))
         return ProfileSummary(
             statements=total,
             statements_per_persisted_result=(
                 total / persisted_results if persisted_results else None
             ),
             db_wait_seconds=self.db_seconds,
-            by_statement={f"{verb} {table}": n for (verb, table), n in self.counts.most_common()},
+            by_statement={
+                f"{verb} {table}": StatementStat(
+                    self.counts[(verb, table)],
+                    self.seconds[(verb, table)],
+                    self.slowest[(verb, table)],
+                )
+                for verb, table in ordered
+            },
         )
 
     def _before(
@@ -87,8 +103,8 @@ class StatementProfile:
         _context: Any,
         executemany: bool,
     ) -> None:
-        conn.info.setdefault(_START_KEY, []).append(time.perf_counter())
         key = classify_statement(statement)
+        conn.info.setdefault(_START_KEY, []).append((time.perf_counter(), key))
         self.counts[key] += 1
         batch = len(parameters) if executemany and isinstance(parameters, list | tuple) else 1
         self.parameter_sets[key] += batch
@@ -102,4 +118,8 @@ class StatementProfile:
         _context: Any,
         _executemany: bool,
     ) -> None:
-        self.db_seconds += time.perf_counter() - conn.info[_START_KEY].pop()
+        started, key = conn.info[_START_KEY].pop()
+        elapsed = time.perf_counter() - started
+        self.db_seconds += elapsed
+        self.seconds[key] += elapsed
+        self.slowest[key] = max(self.slowest[key], elapsed)
