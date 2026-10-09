@@ -76,6 +76,7 @@ SELECT (SELECT count(*) FROM inserted) AS matched,
        (SELECT count(*) FROM updated) AS updated
 """)
 _PAIR_AND_CLAIM = text(str(PAIR_AND_CLAIM_SQL))
+_ANALYZE_STATEMENTS = (text("ANALYZE normalised_transactions"), text("ANALYZE match_claims"))
 
 
 class SetBasedExactError(RuntimeError):
@@ -94,6 +95,11 @@ class SetBasedExactStage:
         afterwards so already-loaded transactions reflect the raw UPDATE.
         Does not commit."""
         self._session.flush()
+        # Rows loaded moments ago have no planner statistics until autovacuum catches up. At
+        # 20,000 entities the unanalysed plan ran the status UPDATE as a per-row bitmap scan
+        # (about 38 s against 0.9 s analysed; DD-21).
+        for statement in _ANALYZE_STATEMENTS:
+            self._session.execute(statement)
         row = self._session.execute(
             _PAIR_AND_CLAIM, {"bank_code": bank_code, "run_id": self._run_id}
         ).one()

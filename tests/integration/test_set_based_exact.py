@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from recon.bench.dataset import generate
+from recon.bench.profiling import StatementProfile
 from recon.bench.runner import BANK_CODE, insert_records
 from recon.config.matching_loader import load_matching_config
 from recon.matching.blocking.candidates import BlockingConfig
@@ -285,3 +286,15 @@ def test_orchestrator_totals_cover_both_exact_stages(db_session: Session) -> Non
         )
     ).one()
     assert chosen.internal_transaction_id == closest  # R47 still decides the collision group
+
+
+def test_the_stage_refreshes_planner_statistics_before_its_statement(db_session: Session) -> None:
+    _pair(db_session)
+    profile = StatementProfile()
+    profile.attach(db_session.connection())
+    try:
+        assert _stage(db_session).run("HDFC") == 1
+    finally:
+        profile.detach()
+
+    assert profile.counts[("ANALYZE", "-")] == 2
