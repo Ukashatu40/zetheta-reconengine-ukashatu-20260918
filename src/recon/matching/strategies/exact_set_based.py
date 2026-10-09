@@ -29,23 +29,15 @@ WITH pool AS (
           WHERE c.normalised_transaction_id = t.id AND c.status = 'ACTIVE'
       )
 ),
-groups AS (
-    SELECT reference, amount_minor, currency, direction
+pairs AS (
+    SELECT (array_agg(id) FILTER (WHERE source = 'INTERNAL'))[1] AS internal_id,
+           (array_agg(id) FILTER (WHERE source = 'EXTERNAL'))[1] AS external_id,
+           (array_agg(txn_date) FILTER (WHERE source = 'EXTERNAL'))[1] AS external_date,
+           reference, amount_minor, currency, direction
     FROM pool
     GROUP BY reference, amount_minor, currency, direction
     HAVING count(*) FILTER (WHERE source = 'INTERNAL') = 1
        AND count(*) FILTER (WHERE source = 'EXTERNAL') = 1
-),
-pairs AS (
-    SELECT i.id AS internal_id, e.id AS external_id, g.reference, g.amount_minor,
-           g.currency, g.direction, e.txn_date AS external_date
-    FROM groups g
-    JOIN pool i ON i.source = 'INTERNAL' AND i.reference = g.reference
-               AND i.amount_minor = g.amount_minor AND i.currency = g.currency
-               AND i.direction = g.direction
-    JOIN pool e ON e.source = 'EXTERNAL' AND e.reference = g.reference
-               AND e.amount_minor = g.amount_minor AND e.currency = g.currency
-               AND e.direction = g.direction
 ),
 inserted AS (
     INSERT INTO match_results (
