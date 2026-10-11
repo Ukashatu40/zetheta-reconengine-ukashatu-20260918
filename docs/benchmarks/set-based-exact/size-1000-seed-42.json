@@ -1,0 +1,113 @@
+{
+  "auto_matches_per_second": 408.34303858678135,
+  "counts": {
+    "auto": 780,
+    "auto_correct": 780,
+    "exact_correct": 680,
+    "external": 930,
+    "false_auto_matches": 0,
+    "internal": 950,
+    "review": 100,
+    "review_correct": 40,
+    "true_pairs": 820
+  },
+  "per_scenario": {
+    "amount_drift": {
+      "auto_correct": 40
+    },
+    "date_shift": {
+      "auto_correct": 60
+    },
+    "exact": {
+      "auto_correct": 620
+    },
+    "external_only": {
+      "unmatched": 50
+    },
+    "internal_only": {
+      "unmatched": 70
+    },
+    "sequential_decoy": {
+      "review_wrong": 60
+    },
+    "typo_counterparty": {
+      "auto_correct": 60
+    },
+    "typo_no_counterparty": {
+      "review_correct": 40
+    }
+  },
+  "profile": {
+    "by_statement": {
+      "ANALYZE -": {
+        "count": 2,
+        "max_seconds": 0.04096947598736733,
+        "seconds": 0.04296110296854749
+      },
+      "INSERT match_claims": {
+        "count": 400,
+        "max_seconds": 0.0031316669774241745,
+        "seconds": 0.3512495319591835
+      },
+      "INSERT match_results": {
+        "count": 200,
+        "max_seconds": 0.004370782990008593,
+        "seconds": 0.20143855235073715
+      },
+      "RELEASE -": {
+        "count": 200,
+        "max_seconds": 0.003026299993507564,
+        "seconds": 0.1600156116182916
+      },
+      "SAVEPOINT -": {
+        "count": 200,
+        "max_seconds": 0.0037494649877771735,
+        "seconds": 0.163787332654465
+      },
+      "SELECT match_results": {
+        "count": 1,
+        "max_seconds": 0.003797593992203474,
+        "seconds": 0.003797593992203474
+      },
+      "SELECT normalised_transactions": {
+        "count": 6,
+        "max_seconds": 0.02473034500144422,
+        "seconds": 0.06821011198917404
+      },
+      "UPDATE match_claims": {
+        "count": 400,
+        "max_seconds": 0.004564357979688793,
+        "seconds": 0.35937914496753365
+      },
+      "UPDATE normalised_transactions": {
+        "count": 99,
+        "max_seconds": 0.007711899001151323,
+        "seconds": 0.13330200815107673
+      },
+      "WITH normalised_transactions": {
+        "count": 1,
+        "max_seconds": 0.10322757199173793,
+        "seconds": 0.10322757199173793
+      }
+    },
+    "db_wait_seconds": 1.5873685626429506,
+    "statements": 1509,
+    "statements_per_persisted_result": 1.7147727272727273
+  },
+  "rates": {
+    "auto_precision": 1.0,
+    "auto_rate_of_externals": 0.8387096774193549,
+    "auto_recall_of_true_pairs": 0.9512195121951219,
+    "exact_rate_of_externals": 0.7311827956989247,
+    "exact_rate_of_true_pairs": 0.8292682926829268
+  },
+  "seconds": {
+    "exact": 0.14900991698959842,
+    "fuzzy": 1.7611487640533596,
+    "insert": 0.5438301920075901,
+    "orchestrator": 2.0034943629871123
+  },
+  "seed": 42,
+  "set_based_exact": false,
+  "size": 1000
+}

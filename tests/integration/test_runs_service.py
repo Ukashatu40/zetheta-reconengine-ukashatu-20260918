@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -9,6 +10,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from recon.bench.profiling import StatementProfile
 from recon.persistence.models import MatchResult, ReconciliationRun
 from recon.runs.service import (
     IdempotencyConflictError,
@@ -168,3 +170,29 @@ def test_executing_a_finished_run_is_a_state_error(db_session: Session) -> None:
     service.execute(started.run.id)
     with pytest.raises(RunStateError):
         service.execute(started.run.id)
+
+
+@pytest.mark.parametrize(("flag", "analyze_statements"), [(True, 2), (False, 0)])
+def test_a_run_uses_the_set_based_exact_stage_only_when_enabled(
+    db_session: Session, flag: bool, analyze_statements: int
+) -> None:
+    f = make_ingestion_file(db_session)
+    db_session.add_all([make_txn(f.id, source="INTERNAL"), make_txn(f.id, source="EXTERNAL")])
+    db_session.flush()
+    service = RunService(
+        db_session, replace(default_settings(), set_based_exact=flag), lambda: _NOW
+    )
+    started = _start(service)
+    db_session.commit()
+
+    profile = StatementProfile()
+    profile.attach(db_session.connection())
+    try:
+        service.execute(started.run.id)
+    finally:
+        profile.detach()
+
+    run = db_session.get(ReconciliationRun, started.run.id)
+    assert run is not None and run.metrics is not None
+    assert run.metrics["exact_matched"] == 1
+    assert profile.counts[("ANALYZE", "-")] == analyze_statements
