@@ -27,6 +27,7 @@ class RunSettings:
     taxonomy: TaxonomyConfig
     stale_run_after: timedelta
     banks: Mapping[str, BankConfig]
+    set_based_exact: bool = False
 
     def stale_after_days(self, bank_code: str) -> int | None:
         config = self.banks.get(bank_code)

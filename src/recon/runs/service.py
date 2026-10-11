@@ -117,6 +117,7 @@ class RunService:
                 self._settings.blocking_for(bank_code),
                 self._settings.amount_tolerance_minor,
                 self._settings.matching,
+                set_based_exact=self._settings.set_based_exact,
             ).run(bank_code)
             classified = ExceptionClassifier(
                 self._session, self._settings.taxonomy, AuditLogger(self._session)
