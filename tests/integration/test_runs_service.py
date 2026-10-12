@@ -196,3 +196,22 @@ def test_a_run_uses_the_set_based_exact_stage_only_when_enabled(
     assert run is not None and run.metrics is not None
     assert run.metrics["exact_matched"] == 1
     assert profile.counts[("ANALYZE", "-")] == analyze_statements
+
+
+def test_the_default_settings_take_the_set_based_path(db_session: Session) -> None:
+    """DD-22: the default settings, unmodified, must use the set-based stage."""
+    f = make_ingestion_file(db_session)
+    db_session.add_all([make_txn(f.id, source="INTERNAL"), make_txn(f.id, source="EXTERNAL")])
+    db_session.flush()
+    service = _service(db_session)
+    started = _start(service)
+    db_session.commit()
+
+    profile = StatementProfile()
+    profile.attach(db_session.connection())
+    try:
+        service.execute(started.run.id)
+    finally:
+        profile.detach()
+
+    assert profile.counts[("ANALYZE", "-")] == 2
