@@ -277,6 +277,14 @@ Unverified or lower-impact: the "Section 26A" penalty citation could not be veri
 - **Fix:** `recon.paths.config_dir()` (env override, then working directory, then source checkout); no module derives config paths from its own location.
 - **Follow-up:** the CI increment adds a scripted container smoke test, so this class of failure is checked on every change.
 
+### IB-11: the set-based default was False on main, and a failing test was committed and merged (fixed)
+
+- **What:** after the default change merged (`49465b9`), `RunSettings.set_based_exact` was `False`, so `/reconcile` ran the Python exact stage while DD-22 said otherwise. A test pinning the default (`test_the_default_settings_take_the_set_based_path`) was then committed while failing, because the commit steps ran `pytest` and `git commit` as separate commands, and merged as `3e2d54f`. The container smoke test could not tell: its pools were empty, so both stages looked the same except for a 15 µs exact duration. How the value became `False` is not established.
+- **Found by:** the new test (`assert 0 == 2`), confirmed by printing the setting on the host and inside the container.
+- **Why the first mutation check missed it:** the earlier test set the flag explicitly through `replace(...)`, so flipping the default changed nothing it looked at.
+- **Fix:** default `True`; commit commands are now chained with `&&` so a red test stops the commit.
+- **Prevention:** CI that blocks merges on failing checks (next increment).
+
 ---
 
 ## DD: design and scope decisions
