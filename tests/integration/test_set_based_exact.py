@@ -297,4 +297,4 @@ def test_the_stage_refreshes_planner_statistics_before_its_statement(db_session:
     finally:
         profile.detach()
 
-    assert profile.counts[("ANALYZE", "-")] == 2
+    assert profile.counts[("ANALYZE", "-")] == 3

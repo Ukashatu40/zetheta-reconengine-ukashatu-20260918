@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 from recon.matching.claims import ClaimConflictError, ClaimsService
 from recon.matching.keys import ExactMatchKey, build_key
 from recon.persistence.models import MatchResult, NormalisedTransaction
+from recon.persistence.repositories.matching import MatchingRepository
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +50,9 @@ class ExactMatchingStrategy:
         external_candidates: list[NormalisedTransaction],
     ) -> ExactMatchOutcome:
         index, skipped_no_key = self._build_index(internal_candidates)
+        rejected = MatchingRepository(self._session).rejected_pairs(
+            t.id for t in internal_candidates
+        )
 
         matched_count = 0
         skipped_claim_conflict = 0
@@ -63,8 +67,11 @@ class ExactMatchingStrategy:
             bucket = index.get(key)
             if not bucket:
                 continue  # no exact candidate at all — falls through to fuzzy/rule matching later
+            allowed = [c for c in bucket if (c.id, external_txn.id) not in rejected]
+            if not allowed:
+                continue  # every candidate is a pair a person unmatched: never re-match it
 
-            internal_txn = self._disambiguate(bucket, external_txn)
+            internal_txn = self._disambiguate(allowed, external_txn)
 
             try:
                 internal_claim, external_claim = self._claims.claim_pair(
