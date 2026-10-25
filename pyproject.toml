@@ -117,6 +117,7 @@ markers = [
     "performance: long-running benchmark",
     "chaos: injects failures",
     "golden: golden dataset regression gate",
+    "security: security properties against a real database",
 ]
 
 [tool.coverage.run]

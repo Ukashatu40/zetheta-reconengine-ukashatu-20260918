@@ -13,8 +13,11 @@
 
 POSTGRES_PASSWORD := $(shell grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2)
 
+TEST_DB_URL := postgresql+psycopg://recon_app:$(POSTGRES_PASSWORD)@localhost:5432/recon_test
+
 .PHONY: up down build migrate migrate-test psql psql-test \
-        fmt lint typecheck test test-integration check api-key
+        fmt lint typecheck test test-integration check api-key \
+        golden golden-manifest seed bench coverage
 
 up:
 	docker compose up -d
@@ -70,3 +73,24 @@ test-integration:
 		pytest -q -m integration -v
 
 check: fmt lint typecheck test
+
+## The golden gate (A8.3): regenerates the planted dataset, runs it through the real
+## pipeline and fails if any scenario's outcome differs from data/golden/manifest.json.
+golden:
+	TEST_DATABASE_URL="$(TEST_DB_URL)" pytest -q -m golden
+
+## Rewrite the committed manifest after an intended change to the generator.
+golden-manifest:
+	python -m recon.cli.golden --write-manifest
+
+## Demo data through the real pipeline (inside the api container). SCALE multiplies volume.
+seed:
+	docker compose exec api python -m recon.cli.seed --scale $(or $(SCALE),1)
+
+## Pipeline benchmark against the A6.1 targets; results land in docs/benchmarks/pipeline/.
+bench:
+	TEST_DATABASE_URL="$(TEST_DB_URL)" python -m recon.cli.benchmark --scale $(or $(SCALE),20) \
+		--output docs/benchmarks/pipeline/scale-$(or $(SCALE),20).json
+
+coverage:
+	TEST_DATABASE_URL="$(TEST_DB_URL)" pytest -q --cov=recon --cov-report=term-missing --cov-fail-under=80
