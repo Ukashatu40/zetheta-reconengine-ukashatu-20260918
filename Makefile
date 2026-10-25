@@ -17,7 +17,8 @@ TEST_DB_URL := postgresql+psycopg://recon_app:$(POSTGRES_PASSWORD)@localhost:543
 
 .PHONY: up down build migrate migrate-test psql psql-test \
         fmt lint typecheck test test-integration check api-key \
-        golden golden-manifest seed bench coverage
+        golden golden-manifest seed bench coverage \
+        web-install web-dev web-check api-types
 
 up:
 	docker compose up -d
@@ -85,7 +86,7 @@ golden-manifest:
 
 ## Demo data through the real pipeline (inside the api container). SCALE multiplies volume.
 seed:
-	docker compose exec api python -m recon.cli.seed --scale $(or $(SCALE),1)
+	docker compose exec api python -m recon.cli.seed --scale $(or $(SCALE),1) --weeks $(or $(WEEKS),1)
 
 ## Pipeline benchmark against the A6.1 targets; results land in docs/benchmarks/pipeline/.
 bench:
@@ -94,3 +95,18 @@ bench:
 
 coverage:
 	TEST_DATABASE_URL="$(TEST_DB_URL)" pytest -q --cov=recon --cov-report=term-missing --cov-fail-under=80
+
+## The web dashboard (frontend/). `web-dev` proxies /api to the engine on localhost:8000.
+web-install:
+	cd frontend && npm ci
+
+web-dev:
+	cd frontend && npm run dev
+
+web-check:
+	cd frontend && npm run check && npm run build
+
+## Regenerate the dashboard's API types after a backend change.
+api-types:
+	python scripts/export_openapi.py
+	cd frontend && npm run gen:api

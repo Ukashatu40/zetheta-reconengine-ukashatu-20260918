@@ -60,6 +60,16 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  web:
+    build:
+      context: ./frontend
+    ports:
+      - "8080:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
