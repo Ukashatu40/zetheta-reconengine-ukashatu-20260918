@@ -6,25 +6,30 @@ from __future__ import annotations
 
 import csv
 import io
+import json
+import re
 import uuid
 from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
-from sqlalchemy import ColumnElement, Date, cast, func, select
+from sqlalchemy import ColumnElement, Date, cast, func, or_, select
 
 from recon.api.auth import Principal, require_admin, require_analyst, require_viewer
 from recon.api.deps import NowDep, SessionDep
 from recon.api.v1.schemas.responses import (
     AssignRequest,
+    ExceptionContext,
     ExceptionDetail,
     ExceptionEventOut,
     ExceptionOut,
+    MatchResultOut,
     OverrideRequest,
     Page,
     ReopenRequest,
     ResolveRequest,
     SlaScanOut,
+    TransactionOut,
 )
 from recon.audit.chains import EXCEPTIONS_CHAIN
 from recon.audit.logger import AuditLogger
@@ -36,7 +41,12 @@ from recon.domain.enums import (
 )
 from recon.excmgmt.queues import is_queue, queue_for_tier
 from recon.excmgmt.sla import SlaScanner
-from recon.persistence.models import ExceptionEvent, ReconException
+from recon.persistence.models import (
+    ExceptionEvent,
+    MatchResult,
+    NormalisedTransaction,
+    ReconException,
+)
 from recon.security.rbac import Role, has_at_least
 
 router = APIRouter(prefix="/api/v1/exceptions", tags=["exceptions"])
@@ -202,6 +212,48 @@ def get_exception(exception_id: uuid.UUID, session: SessionDep) -> ExceptionDeta
     return ExceptionDetail(
         **ExceptionOut.model_validate(row).model_dump(),
         events=[ExceptionEventOut.model_validate(e) for e in events],
+    )
+
+
+_UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+_CONTEXT_LIMIT = 50
+
+
+@router.get(
+    "/{exception_id}/context",
+    response_model=ExceptionContext,
+    dependencies=[Depends(require_viewer)],
+)
+def get_exception_context(exception_id: uuid.UUID, session: SessionDep) -> ExceptionContext:
+    """The transactions an exception refers to and the matches proposed for them."""
+    row = session.get(ReconException, exception_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="exception not found")
+    ids = sorted({uuid.UUID(m) for m in _UUID.findall(json.dumps(row.affected_records))})
+    if not ids:
+        return ExceptionContext(transactions=[], matches=[])
+    transactions = session.scalars(
+        select(NormalisedTransaction)
+        .where(NormalisedTransaction.id.in_(ids))
+        .order_by(NormalisedTransaction.source, NormalisedTransaction.source_line_no)
+        .limit(_CONTEXT_LIMIT)
+    ).all()
+    txn_ids = [t.id for t in transactions]
+    matches = session.scalars(
+        select(MatchResult)
+        .where(
+            or_(
+                MatchResult.id.in_(ids),
+                MatchResult.internal_transaction_id.in_(txn_ids),
+                MatchResult.external_transaction_id.in_(txn_ids),
+            )
+        )
+        .order_by(MatchResult.created_at.desc())
+        .limit(_CONTEXT_LIMIT)
+    ).all()
+    return ExceptionContext(
+        transactions=[TransactionOut.model_validate(t) for t in transactions],
+        matches=[MatchResultOut.model_validate(m) for m in matches],
     )
 
 

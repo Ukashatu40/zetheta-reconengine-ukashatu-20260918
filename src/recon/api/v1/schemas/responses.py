@@ -60,6 +60,47 @@ class ExceptionDetail(ExceptionOut):
     events: list[ExceptionEventOut]
 
 
+class TransactionOut(BaseModel):
+    """A normalised transaction as shown next to an exception. Only the masked account is
+    exposed, and narration has already been PAN-masked at ingestion."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    source: str
+    bank_code: str
+    format_type: str
+    source_line_no: int | None
+    txn_id: str
+    bank_ref: str | None
+    normalised_reference: str | None
+    amount: Decimal
+    currency: str
+    direction: str
+    is_reversal: bool
+    txn_date: date
+    settlement_date: date | None
+    txn_timestamp_utc: datetime
+    counterparty_name: str | None
+    counterparty_account_masked: str | None
+    narration: str | None
+    match_status: str
+    ingestion_file_id: uuid.UUID
+
+
+class ExceptionContext(BaseModel):
+    """What an analyst needs to judge an exception: the records it concerns and every match
+    that was proposed, made or rejected for them."""
+
+    transactions: list[TransactionOut]
+    matches: list[MatchResultOut]
+
+
+class MeOut(BaseModel):
+    name: str
+    role: str
+
+
 class ResolveRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 

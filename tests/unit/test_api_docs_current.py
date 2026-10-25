@@ -18,3 +18,14 @@ def test_the_committed_api_reference_matches_the_application() -> None:
         check=False,
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_the_dashboards_openapi_snapshot_matches_the_application() -> None:
+    result = subprocess.run(
+        [sys.executable, str(_ROOT / "scripts" / "export_openapi.py"), "--check"],
+        capture_output=True,
+        text=True,
+        cwd=_ROOT,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr

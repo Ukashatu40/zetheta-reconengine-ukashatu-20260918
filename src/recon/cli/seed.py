@@ -56,15 +56,29 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--scale", type=int, default=1)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--anchor", type=date.fromisoformat, default=None, help="a Thursday")
+    parser.add_argument(
+        "--weeks",
+        type=int,
+        default=1,
+        help="seed this many consecutive weeks ending at the anchor (older weeks use other seeds)",
+    )
     parser.add_argument("--no-reconcile", action="store_true", help="ingest only; do not match")
     args = parser.parse_args(argv)
 
     anchor = args.anchor or last_thursday(datetime.now(UTC).date())
+    if args.weeks < 1:
+        print("cannot seed: --weeks must be at least 1", file=sys.stderr)
+        return 2
     try:
-        sample = build_sample_set(args.seed, args.scale, anchor)
+        # oldest first, so the newest week ends the series and sets the reconciliation time
+        samples = [
+            build_sample_set(args.seed + n, args.scale, anchor - timedelta(weeks=n))
+            for n in reversed(range(args.weeks))
+        ]
     except ValueError as exc:
         print(f"cannot seed: {exc}", file=sys.stderr)
         return 2
+    sample = samples[-1]
 
     settings = default_settings()
     with get_session_factory(get_engine())() as session:
@@ -74,13 +88,16 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 1
-        summary = load_files(session, sample, settings, sample.as_of, "system:seed")
+        for week in samples:
+            summary = load_files(session, week, settings, week.as_of, "system:seed")
+            session.commit()
+            print(
+                f"week of {week.anchor.isoformat()}: ingested {summary.files} files, "
+                f"{summary.records} records ({summary.parse_errors} malformed), "
+                f"{summary.fx_rates} exchange rates"
+            )
         keys = create_keys(session)
         session.commit()
-        print(
-            f"ingested {summary.files} files, {summary.records} records "
-            f"({summary.parse_errors} malformed), {summary.fx_rates} exchange rates"
-        )
         if not args.no_reconcile:
             runs = reconcile_all(
                 session, settings, sample.as_of, sorted(settings.banks), "system:seed"

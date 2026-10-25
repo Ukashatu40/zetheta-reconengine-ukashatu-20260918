@@ -64,6 +64,7 @@ spec-named ones.
 | POST | `/api/v1/exceptions/sla-scan` | ADMIN | none | Run Sla Scan |
 | GET | `/api/v1/exceptions/{exception_id}` | VIEWER | none | Get Exception |
 | PUT | `/api/v1/exceptions/{exception_id}/assign` | ANALYST | none | Assign Exception |
+| GET | `/api/v1/exceptions/{exception_id}/context` | VIEWER | none | Get Exception Context |
 | PUT | `/api/v1/exceptions/{exception_id}/override` | ADMIN | none | Override Exception |
 | POST | `/api/v1/exceptions/{exception_id}/reopen` | ANALYST | none | Reopen Exception |
 | PUT | `/api/v1/exceptions/{exception_id}/resolve` | ANALYST | none | Resolve Exception |
@@ -121,6 +122,12 @@ spec-named ones.
 | GET | `/api/v1/reconciliation/runs/{run_id}/results` | VIEWER | `status`, `match_type`, `limit`, `offset` | Run Results |
 | GET | `/api/v1/runs` | VIEWER | `bank_code`, `status`, `limit`, `offset` | List Runs (deprecated) |
 | GET | `/api/v1/runs/{run_id}/results` | VIEWER | `status`, `match_type`, `limit`, `offset` | Run Results (deprecated) |
+
+## session
+
+| Method | Path | Role | Parameters | Summary |
+|---|---|---|---|---|
+| GET | `/api/v1/me` | VIEWER | none | Me |
 
 ## upload
 

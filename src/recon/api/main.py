@@ -29,6 +29,7 @@ from recon.api.v1 import (
     files,
     fx,
     matches,
+    me,
     reports,
     runs,
     upload,
@@ -110,6 +111,7 @@ def health_ready(
     return {"status": "ok" if ready else "unavailable", "checks": checks}
 
 
+app.include_router(me.router)
 app.include_router(exceptions.router)
 app.include_router(audit.router)
 app.include_router(dashboard.router)
