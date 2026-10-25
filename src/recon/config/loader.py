@@ -27,8 +27,17 @@ def _load_schema() -> dict[str, Any]:
 
 
 def load_bank_config(path: Path) -> BankConfig:
-    raw_text = path.read_text(encoding="utf-8")
-    data = yaml.safe_load(raw_text)
+    return parse_bank_config(path.read_text(encoding="utf-8"), str(path))
+
+
+def parse_bank_config(raw_text: str, source: str) -> BankConfig:
+    """Validates configuration text against the JSON Schema and the typed model.
+    `source` names it in error messages (a path, or an uploaded file's name)."""
+    path = source
+    try:
+        data = yaml.safe_load(raw_text)
+    except yaml.YAMLError as exc:
+        raise BankConfigError(f"{path}: not valid YAML: {exc}") from exc
     if not isinstance(data, dict):
         raise BankConfigError(f"{path}: expected a YAML mapping at the top level")
 

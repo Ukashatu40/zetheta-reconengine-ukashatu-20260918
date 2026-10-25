@@ -4,7 +4,24 @@ bank_name: Kotak Mahindra Bank
 config_version: kotak.v1
 supported_formats:
   - CAMT053
+  - CSV
 timezone: Asia/Kolkata
 currency_default: INR
 settlement_cycle: "T+1"
 reconciliation_window_days: 1
+expected_settlement_time: "19:30"
+# The CSV section serves the aggregator's internal-ledger export for Kotak
+# settlements; Kotak's own statements arrive as CAMT.053.
+csv:
+  delimiter: ","
+  encoding: "utf-8"
+  has_header: true
+  date_format: "%Y-%m-%d"
+  amount_decimal_separator: "."
+  column_mapping:
+    reference: "Ledger Ref"
+    txn_date: "Posting Date"
+    amount: "Amount"
+    direction: "DR/CR"
+    counterparty_name: "Party"
+    narration: "Narration"

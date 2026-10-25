@@ -1,0 +1,26 @@
+# config/banks/indb.v1.yaml
+# IndusInd Bank (PDF B1: one of the seven partner banks).
+bank_code: INDB
+bank_name: IndusInd Bank
+config_version: indb.v1
+supported_formats:
+  - CSV
+timezone: Asia/Kolkata
+currency_default: INR
+settlement_cycle: "T+1"
+reconciliation_window_days: 1
+expected_settlement_time: "21:00"
+csv:
+  delimiter: ","
+  encoding: "utf-8"
+  has_header: true
+  date_format: "%d/%m/%Y"
+  amount_decimal_separator: "."
+  amount_thousands_separator: ","
+  column_mapping:
+    reference: "UTR No"
+    txn_date: "Value Date"
+    amount: "Txn Amt"
+    direction: "CR/DR"
+    counterparty_name: "Beneficiary"
+    narration: "Particulars"

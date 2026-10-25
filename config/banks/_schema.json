@@ -13,40 +13,81 @@
     "reconciliation_window_days"
   ],
   "properties": {
-    "bank_code": { "type": "string", "minLength": 1, "maxLength": 20 },
-    "bank_name": { "type": "string", "minLength": 1 },
+    "bank_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20
+    },
+    "bank_name": {
+      "type": "string",
+      "minLength": 1
+    },
     "config_version": {
       "type": "string",
       "pattern": "^[a-z0-9_]+\\.v[0-9]+$"
     },
     "supported_formats": {
       "type": "array",
-      "items": { "enum": ["CSV", "MT940", "CAMT053"] },
+      "items": {
+        "enum": [
+          "CSV",
+          "MT940",
+          "CAMT053"
+        ]
+      },
       "minItems": 1
     },
-    "timezone": { "type": "string" },
-    "currency_default": { "type": "string", "pattern": "^[A-Za-z]{3}$" },
-    "settlement_cycle": { "type": "string" },
-    "reconciliation_window_days": { "type": "integer", "minimum": 0 },
+    "timezone": {
+      "type": "string"
+    },
+    "currency_default": {
+      "type": "string",
+      "pattern": "^[A-Za-z]{3}$"
+    },
+    "settlement_cycle": {
+      "type": "string"
+    },
+    "reconciliation_window_days": {
+      "type": "integer",
+      "minimum": 0
+    },
     "csv": {
       "type": "object",
-      "required": ["column_mapping", "date_format"],
+      "required": [
+        "column_mapping",
+        "date_format"
+      ],
       "properties": {
-        "delimiter": { "type": "string", "minLength": 1, "maxLength": 1 },
-        "encoding": { "type": "string" },
-        "has_header": { "type": "boolean" },
+        "delimiter": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1
+        },
+        "encoding": {
+          "type": "string"
+        },
+        "has_header": {
+          "type": "boolean"
+        },
         "column_mapping": {
           "type": "object",
-          "additionalProperties": { "type": "string" }
+          "additionalProperties": {
+            "type": "string"
+          }
         },
-        "date_format": { "type": "string" },
+        "date_format": {
+          "type": "string"
+        },
         "amount_decimal_separator": {
           "type": "string",
           "minLength": 1,
           "maxLength": 1
         },
         "amount_thousands_separator": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "maxLength": 1
         }
       },
@@ -54,9 +95,59 @@
     },
     "mt940": {
       "type": "object",
-      "required": ["decimal_separator"],
+      "required": [
+        "decimal_separator"
+      ],
       "properties": {
-        "decimal_separator": { "type": "string", "enum": [",", "."] }
+        "decimal_separator": {
+          "type": "string",
+          "enum": [
+            ",",
+            "."
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "calendar": {
+      "type": "string",
+      "minLength": 1
+    },
+    "date_offset_business_days": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "amount_tolerance_minor": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "fx_tolerance_percent": {
+      "type": [
+        "number",
+        "string"
+      ]
+    },
+    "expected_settlement_time": {
+      "type": "string",
+      "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+    },
+    "fee_schedule": {
+      "type": "object",
+      "properties": {
+        "fixed_minor": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "percent": {
+          "type": [
+            "number",
+            "string"
+          ]
+        },
+        "tolerance_minor": {
+          "type": "integer",
+          "minimum": 0
+        }
       },
       "additionalProperties": false
     }
