@@ -107,3 +107,31 @@ def test_local_date_reflects_source_statement_date_not_utc_shifted_date() -> Non
 
     assert result.local_date == date(2026, 3, 15)  # matches the statement
     assert result.utc.date() == date(2026, 3, 14)  # the UTC instant, shifted back a day
+
+
+# -- IB-12: a time of day inside the date value was parsed and then thrown away --------
+
+
+def test_a_format_with_a_time_keeps_the_time_of_day() -> None:
+    ts = normalise_timestamp("12-03-2026 23:40", "%d-%m-%Y %H:%M", "Asia/Kolkata")
+    assert (ts.utc.hour, ts.utc.minute) == (18, 10)  # 23:40 IST is 18:10 UTC, the same day
+    assert ts.utc.date().isoformat() == "2026-03-12"
+    assert ts.local_date.isoformat() == "2026-03-12"
+    assert ts.original_text == "12-03-2026 23:40"
+
+
+def test_two_bookings_either_side_of_midnight_are_minutes_apart_not_a_day() -> None:
+    before = normalise_timestamp("12-03-2026 23:40", "%d-%m-%Y %H:%M", "Asia/Kolkata")
+    after = normalise_timestamp("13-03-2026 00:15", "%d-%m-%Y %H:%M", "Asia/Kolkata")
+    assert after.local_date != before.local_date
+    assert (after.utc - before.utc).total_seconds() == 35 * 60
+
+
+def test_a_date_only_format_is_still_midnight_local() -> None:
+    ts = normalise_timestamp("12-03-2026", "%d-%m-%Y", "Asia/Kolkata")
+    assert (ts.utc.hour, ts.utc.minute) == (18, 30) and ts.utc.date().isoformat() == "2026-03-11"
+
+
+def test_an_explicit_time_text_still_wins_over_a_date_only_format() -> None:
+    ts = normalise_timestamp("12-03-2026", "%d-%m-%Y", "Asia/Kolkata", time_text="2340")
+    assert (ts.utc.hour, ts.utc.minute) == (18, 10)
