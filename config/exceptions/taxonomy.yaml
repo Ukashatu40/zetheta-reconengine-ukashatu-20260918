@@ -9,6 +9,13 @@ auto_resolve:
 escalation:
   fx_variance_tier4_percent: "3.0" # strictly beyond (A4.2)
   systemic_exception_count: 50 # strictly more than, per bank per batch (A4.2)
+detection:
+  # Whole-word match against the narration (A4.1 #18).
+  regulatory_hold_keywords:
+    [AML, CFT, REGULATORY HOLD, COMPLIANCE HOLD, COMPLIANCE REVIEW, FIU]
+  reversal_keywords: [REVERSAL, REVERSED]
+  timezone_offset_max_gap_hours: 24 # strictly less than; a clean next-day booking is 24h apart
+  truncated_reference_length: 16 # A4.1 #15
 # default_tier = tier used when the exception is NOT auto-resolved.
 categories:
   - {

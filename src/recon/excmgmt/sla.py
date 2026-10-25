@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from recon.audit.chains import EXCEPTIONS_CHAIN
 from recon.audit.logger import AuditLogger
 from recon.domain.enums import AuditActionType, EscalationTier
+from recon.excmgmt.queues import is_queue, queue_for_tier
 from recon.excmgmt.routing import tier_after_sla_check
 from recon.persistence.models import ExceptionEvent, ReconException
 
@@ -60,6 +61,8 @@ class SlaScanner:
                 escalated += 1
                 exception.assigned_tier = new.value
                 exception.status = "ESCALATED"
+                if is_queue(exception.assigned_to):  # a named person keeps the item
+                    exception.assigned_to = queue_for_tier(new.value)
                 event_type, detail = "ESCALATED", f"SLA breached; escalated to tier {new.value}."
             self._session.add(
                 ExceptionEvent(
