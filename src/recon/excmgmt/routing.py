@@ -7,11 +7,14 @@ Tier order of precedence:
   1. Tier 4: category forced to compliance (DIRECTION_REVERSAL per AE-03,
      REGULATORY_HOLD), FX variance strictly beyond the threshold, or a
      systemic failure (strictly more than N exceptions for one bank batch).
-  2. Tier 3: individual value or cumulative daily value strictly above the
-     configured thresholds. This overrides auto-resolution: a large
-     exception is never auto-resolved.
+  2. Tier 3: an individual value strictly above the configured threshold. This
+     overrides auto-resolution: a large exception is never auto-resolved.
   3. Tier 1: rule-eligible for auto-resolution.
-  4. Otherwise the category's default tier.
+  4. Tier 3: the bank's cumulative value for the day strictly above the
+     configured threshold. It routes the day's human-handled exceptions to a
+     senior manager; it does not pull a Rs 6 fee adjustment out of automation
+     because other exceptions that day were large.
+  5. Otherwise the category's default tier.
 
 A conditional category with missing context is never auto-resolved.
 """
@@ -128,13 +131,17 @@ def _tier4_reason(ctx: ExceptionContext, rule: CategoryRule, tax: TaxonomyConfig
     return None
 
 
-def _exceeds_value(ctx: ExceptionContext, tax: TaxonomyConfig) -> bool:
-    limits = tax.value_thresholds
+def _exceeds_individual(ctx: ExceptionContext, tax: TaxonomyConfig) -> bool:
     individual = ctx.amount_inr_minor
-    cumulative = ctx.cumulative_daily_inr_minor
-    return (individual is not None and individual > limits.critical_individual_inr_minor) or (
-        cumulative is not None and cumulative > limits.critical_cumulative_daily_inr_minor
+    return (
+        individual is not None and individual > tax.value_thresholds.critical_individual_inr_minor
     )
+
+
+def _exceeds_cumulative(ctx: ExceptionContext, tax: TaxonomyConfig) -> bool:
+    cumulative = ctx.cumulative_daily_inr_minor
+    limit = tax.value_thresholds.critical_cumulative_daily_inr_minor
+    return cumulative is not None and cumulative > limit
 
 
 def _tier(
@@ -143,8 +150,13 @@ def _tier(
     tier4 = _tier4_reason(ctx, rule, tax)
     if tier4 is not None:
         return EscalationTier.TIER_4_COMPLIANCE, tier4
-    if _exceeds_value(ctx, tax):
+    if _exceeds_individual(ctx, tax):
         return EscalationTier.TIER_3_SENIOR, "value above the senior-operations threshold"
     if eligible:
         return EscalationTier.TIER_1_AUTO, "eligible for auto-resolution"
+    if _exceeds_cumulative(ctx, tax):
+        return (
+            EscalationTier.TIER_3_SENIOR,
+            "the bank's cumulative value for the day is above the senior-operations threshold",
+        )
     return rule.default_tier, "category default tier"

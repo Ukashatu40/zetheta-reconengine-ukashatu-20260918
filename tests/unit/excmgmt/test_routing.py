@@ -143,3 +143,26 @@ def test_missing_internal_unresolved_after_four_hours_reaches_tier_3() -> None:
     d = _route(ExceptionCategory.MISSING_INTERNAL)
     escalated = tier_after_sla_check(d.tier, d.sla_deadline, _NOW + timedelta(minutes=241))
     assert escalated is EscalationTier.TIER_3_SENIOR
+
+
+def test_a_busy_day_does_not_pull_an_auto_resolvable_exception_out_of_automation() -> None:
+    d = _route(
+        ExceptionCategory.FEE_DEDUCTION,
+        amount_inr_minor=600,
+        cumulative_daily_inr_minor=9_000_000_000,
+    )
+    assert d.tier is EscalationTier.TIER_1_AUTO
+
+
+def test_an_individually_large_exception_is_still_never_auto_resolved() -> None:
+    d = _route(ExceptionCategory.FEE_DEDUCTION, amount_inr_minor=100_000_001)
+    assert d.tier is EscalationTier.TIER_3_SENIOR
+
+
+def test_the_cumulative_rule_explains_itself() -> None:
+    d = _route(
+        ExceptionCategory.MISSING_EXTERNAL,
+        amount_inr_minor=1_000,
+        cumulative_daily_inr_minor=1_000_000_001,
+    )
+    assert "cumulative" in d.rationale

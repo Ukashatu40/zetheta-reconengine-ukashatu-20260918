@@ -1,36 +1,59 @@
 # src/recon/excmgmt/classifier.py
-"""ExceptionClassifier (R61): turns quarantined rows and unmatched
-transactions into routed, persisted exceptions.
+"""ExceptionClassifier (R61): turns quarantined rows, unmatched leftovers, review-band
+pairs, matched pairs and group matches into routed, persisted exceptions.
 
-Detects seven categories: FORMAT_ERROR, MISSING_INTERNAL, MISSING_EXTERNAL,
-DIRECTION_REVERSAL, CURRENCY_MISMATCH, AMOUNT_MISMATCH, DATE_MISMATCH.
-The rest need duplicate detection, split/netted/FX matching, or
-statement-age data that does not exist yet.
+Detects all 19 categories:
+  * file level: FORMAT_ERROR
+  * leftovers: MISSING_INTERNAL / MISSING_EXTERNAL, STALE_TRANSACTION,
+    SETTLEMENT_DELAY, REVERSAL_PENDING, REGULATORY_HOLD, DUPLICATE_INTERNAL /
+    DUPLICATE_EXTERNAL, and, for a pair sharing a reference, whatever
+    pair_analysis finds (DIRECTION_REVERSAL, CURRENCY_MISMATCH, FX_VARIANCE,
+    REFERENCE_TRUNCATED, FEE_DEDUCTION, AMOUNT_MISMATCH, TIMEZONE_OFFSET,
+    DATE_MISMATCH)
+  * review-band pairs: the same pair analysis, so a truncated reference or a
+    fee-shaped gap is named instead of sitting anonymously in the review queue
+  * matched pairs: dates, reference cuts and settlement timing that survive a match
+  * split and netted groups: PARTIAL_MATCH and NETTED_SETTLEMENT records
 
-Idempotent via dedupe_key. Audit events are not written (no AuditLogger
-yet). Value thresholds use INR amounts only (no FX rates yet).
+Idempotent via dedupe_key. Value thresholds use the INR-equivalent amount (AE-07)
+when an FX service is supplied, and the cumulative INR value per bank per day
+feeds the Tier 3 rule of A4.2.
 """
 
 from __future__ import annotations
 
 import uuid
-from collections import Counter
+from collections import Counter, defaultdict
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import func, select, tuple_
-from sqlalchemy.orm import Session
+from sqlalchemy import func, or_, select, tuple_
+from sqlalchemy.orm import Session, aliased
 
 from recon.audit.chains import EXCEPTIONS_CHAIN
 from recon.audit.logger import AuditLogger
+from recon.calendar import default_calendar
+from recon.config.models import BankConfig
 from recon.domain.enums import AuditActionType, ExceptionCategory
+from recon.excmgmt.pair_analysis import (
+    PairContext,
+    PairFinding,
+    analyse_pair,
+    has_regulatory_hold,
+    is_posted_reversal,
+    keyword_pattern,
+)
 from recon.excmgmt.routing import ExceptionContext, RoutingDecision, route
 from recon.excmgmt.taxonomy import TaxonomyConfig
+from recon.fx.convert import to_inr_minor
+from recon.fx.service import FxService
 from recon.persistence.models import (
     ExceptionEvent,
     IngestionFile,
+    MatchResult,
     NormalisedTransaction,
     RawTransaction,
     ReconException,
@@ -61,7 +84,7 @@ _SUGGESTED_RESOLUTION: dict[ExceptionCategory, str] = {
     ExceptionCategory.AMOUNT_MISMATCH: (
         "Compare the amounts; correct the wrong side or record a fee or adjustment."
     ),
-    ExceptionCategory.DATE_MISMATCH: ("Check booking versus value dates and settlement timing."),
+    ExceptionCategory.DATE_MISMATCH: "Check booking versus value dates and settlement timing.",
     ExceptionCategory.DUPLICATE_INTERNAL: (
         "Void the duplicate ledger entry and link it to the original."
     ),
@@ -69,10 +92,45 @@ _SUGGESTED_RESOLUTION: dict[ExceptionCategory, str] = {
         "Confirm with the bank whether the settlement was processed twice; do not double-count."
     ),
     ExceptionCategory.STALE_TRANSACTION: (
-        """Investigate why it is still unmatched past the window;
-        chase the bank or write off with approval."""
+        "Investigate why it is still unmatched past the window; "
+        "chase the bank or write off with approval."
+    ),
+    ExceptionCategory.PARTIAL_MATCH: (
+        "One internal transaction was settled in several parts that sum to it; "
+        "confirm the grouping."
+    ),
+    ExceptionCategory.NETTED_SETTLEMENT: (
+        "Several internal transactions were netted into one bank entry that sums to them; "
+        "confirm the grouping."
+    ),
+    ExceptionCategory.FEE_DEDUCTION: (
+        "Post an adjustment for the bank's fee so the ledger reflects what was settled."
+    ),
+    ExceptionCategory.FX_VARIANCE: (
+        "Compare the booking rate with the RBI reference rate; claim the difference "
+        "from the bank or write it off with approval."
+    ),
+    ExceptionCategory.REFERENCE_TRUNCATED: (
+        "The bank cut the reference; match on the shared prefix and confirm the rest."
+    ),
+    ExceptionCategory.TIMEZONE_OFFSET: (
+        "The dates differ only because of timezone conversion; re-match on the adjusted date."
+    ),
+    ExceptionCategory.REVERSAL_PENDING: (
+        "A reversal is posted internally but not yet settled by the bank; "
+        "chase the bank for the reversing entry."
+    ),
+    ExceptionCategory.REGULATORY_HOLD: (
+        "Hold for compliance review; do not release or write off without sign-off."
+    ),
+    ExceptionCategory.SETTLEMENT_DELAY: (
+        "Settlement ran past the cycle the bank is bound to; raise it with the bank "
+        "and track against the RBI timeline."
     ),
 }
+
+# A4.1 #17-19 and A7.1 are single-record: they describe one transaction, not a pair.
+_HOLD_RATIONALE = "The narration marks reference {ref} as held for compliance review."
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,6 +138,15 @@ class ClassifierOutcome:
     created_count: int
     skipped_existing_count: int
     created_by_category: dict[str, int] = field(default_factory=dict)
+
+    def __add__(self, other: ClassifierOutcome) -> ClassifierOutcome:
+        merged: Counter[str] = Counter(self.created_by_category)
+        merged.update(other.created_by_category)
+        return ClassifierOutcome(
+            self.created_count + other.created_count,
+            self.skipped_existing_count + other.skipped_existing_count,
+            dict(merged),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,14 +161,29 @@ class _Candidate:
     amount_inr_minor: int | None = None
     amount_difference_minor: int | None = None
     days_offset: int | None = None
+    fuzzy_confidence: Decimal | None = None
+    fx_variance_percent: Decimal | None = None
+    value_date: date | None = None
     ingestion_file_id: uuid.UUID | None = None
 
 
 class ExceptionClassifier:
-    def __init__(self, session: Session, taxonomy: TaxonomyConfig, audit: AuditLogger) -> None:
+    def __init__(
+        self,
+        session: Session,
+        taxonomy: TaxonomyConfig,
+        audit: AuditLogger,
+        *,
+        banks: Mapping[str, BankConfig] | None = None,
+        fx: FxService | None = None,
+    ) -> None:
         self._session = session
         self._taxonomy = taxonomy
         self._audit = audit
+        self._banks = banks
+        self._fx = fx
+
+    # -- public entry points -------------------------------------------------
 
     def classify_ingestion_file(
         self, ingestion_file_id: uuid.UUID, now: datetime
@@ -121,6 +203,34 @@ class ExceptionClassifier:
         candidates = self._format_error_candidates(ingestion_file, rows)
         return self._persist(candidates, None, now, batch_count=len(rows))
 
+    def classify_run(
+        self,
+        bank_code: str,
+        run_id: str,
+        now: datetime,
+        *,
+        as_of_date: date | None = None,
+        stale_after_days: int | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
+    ) -> ClassifierOutcome:
+        """Everything a run can raise, in one pass: leftovers first, then the pairs
+        and groups the run produced."""
+        return (
+            self.classify_unmatched(
+                bank_code,
+                run_id,
+                now,
+                as_of_date=as_of_date,
+                stale_after_days=stale_after_days,
+                date_from=date_from,
+                date_to=date_to,
+            )
+            + self.classify_pending_review(bank_code, run_id, now)
+            + self.classify_matched(bank_code, run_id, now)
+            + self.classify_groups(bank_code, run_id, now)
+        )
+
     def classify_unmatched(
         self,
         bank_code: str,
@@ -129,16 +239,26 @@ class ExceptionClassifier:
         *,
         as_of_date: date | None = None,
         stale_after_days: int | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
     ) -> ClassifierOutcome:
         if (as_of_date is None) != (stale_after_days is None):
             raise ValueError("as_of_date and stale_after_days must be given together")
-        duplicates, duplicate_ids = self._duplicate_candidates(bank_code)
+        duplicates, duplicate_ids = self._duplicate_candidates(bank_code, date_from, date_to)
         repository = MatchingRepository(self._session)
         internals = [
-            t for t in repository.find_unmatched(bank_code, "INTERNAL") if t.id not in duplicate_ids
+            t
+            for t in repository.find_unmatched(
+                bank_code, "INTERNAL", date_from=date_from, date_to=date_to
+            )
+            if t.id not in duplicate_ids
         ]
         externals = [
-            t for t in repository.find_unmatched(bank_code, "EXTERNAL") if t.id not in duplicate_ids
+            t
+            for t in repository.find_unmatched(
+                bank_code, "EXTERNAL", date_from=date_from, date_to=date_to
+            )
+            if t.id not in duplicate_ids
         ]
         candidates = duplicates + self._unmatched_candidates(
             bank_code,
@@ -148,6 +268,167 @@ class ExceptionClassifier:
             stale_after_days=stale_after_days,
         )
         return self._persist(candidates, run_id, now, batch_count=len(candidates))
+
+    def classify_pending_review(
+        self, bank_code: str, run_id: str, now: datetime
+    ) -> ClassifierOutcome:
+        """Names the review-band pairs the run proposed. A pair the analysis finds
+        nothing wrong with (an identical pair, e.g. a sequential-reference decoy)
+        stays in the review queue without an exception."""
+        i, e = aliased(NormalisedTransaction), aliased(NormalisedTransaction)
+        rows = self._session.execute(
+            select(MatchResult, i, e)
+            .join(i, i.id == MatchResult.internal_transaction_id)
+            .join(e, e.id == MatchResult.external_transaction_id)
+            .where(
+                MatchResult.run_id == run_id,
+                MatchResult.status == "PENDING_REVIEW",
+                MatchResult.match_group_id.is_(None),
+                i.bank_code == bank_code,
+            )
+            .order_by(MatchResult.created_at, MatchResult.id)
+        ).all()
+        ctx = self._context(bank_code)
+        candidates: list[_Candidate] = []
+        for result, internal, external in rows:
+            for finding in analyse_pair(
+                internal, external, ctx, matched=False, confidence=result.confidence
+            )[:1]:
+                candidates.append(
+                    self._pair_candidate_from(
+                        bank_code,
+                        internal,
+                        external,
+                        finding,
+                        key=f"{finding.category.value}:pair:{internal.id}:{external.id}",
+                        match_result_id=result.id,
+                    )
+                )
+        return self._persist(candidates, run_id, now, batch_count=len(candidates))
+
+    def classify_matched(self, bank_code: str, run_id: str, now: datetime) -> ClassifierOutcome:
+        """Findings that survive a match: dates, truncated references, settlement
+        timing, compliance holds. Only pairs that could have one are loaded."""
+        i, e = aliased(NormalisedTransaction), aliased(NormalisedTransaction)
+        detection = self._taxonomy.detection
+        conditions = [
+            i.txn_date != e.txn_date,
+            func.coalesce(e.settlement_date, e.txn_date) != i.txn_date,
+            i.normalised_reference.is_distinct_from(e.normalised_reference),
+        ]
+        hold = keyword_pattern(detection.regulatory_hold_keywords)
+        if hold is not None:
+            posix = hold.pattern.replace("\\b", "\\y")  # PostgreSQL's word boundary
+            for side in (i, e):
+                conditions.append(
+                    func.coalesce(side.narration_normalised, side.narration, "").op("~*")(posix)
+                )
+        rows = self._session.execute(
+            select(MatchResult, i, e)
+            .join(i, i.id == MatchResult.internal_transaction_id)
+            .join(e, e.id == MatchResult.external_transaction_id)
+            .where(
+                MatchResult.run_id == run_id,
+                MatchResult.status.in_(("AUTO_MATCHED", "CONFIRMED")),
+                MatchResult.match_group_id.is_(None),
+                i.bank_code == bank_code,
+                or_(*conditions),
+            )
+            .order_by(MatchResult.created_at, MatchResult.id)
+        ).all()
+        ctx = self._context(bank_code)
+        candidates = [
+            self._pair_candidate_from(
+                bank_code,
+                internal,
+                external,
+                finding,
+                key=f"{finding.category.value}:matched:{result.id}",
+                match_result_id=result.id,
+                already_matched=True,
+            )
+            for result, internal, external in rows
+            for finding in analyse_pair(
+                internal, external, ctx, matched=True, confidence=result.confidence
+            )
+        ]
+        return self._persist(candidates, run_id, now, batch_count=len(candidates))
+
+    def classify_groups(self, bank_code: str, run_id: str, now: datetime) -> ClassifierOutcome:
+        """One PARTIAL_MATCH (split) or NETTED_SETTLEMENT (netted) record per group."""
+        groups: dict[uuid.UUID, list[MatchResult]] = defaultdict(list)
+        for result in self._session.scalars(
+            select(MatchResult)
+            .join(
+                NormalisedTransaction,
+                NormalisedTransaction.id == MatchResult.internal_transaction_id,
+            )
+            .where(
+                MatchResult.run_id == run_id,
+                MatchResult.match_group_id.is_not(None),
+                NormalisedTransaction.bank_code == bank_code,
+            )
+            .order_by(MatchResult.created_at, MatchResult.id)
+        ):
+            assert result.match_group_id is not None
+            groups[result.match_group_id].append(result)
+
+        candidates: list[_Candidate] = []
+        for group_id, results in groups.items():
+            first = results[0]
+            split = first.match_type == "SPLIT"
+            single_id = uuid.UUID(first.matched_fields["single_transaction_id"])
+            single = self._session.scalars(
+                select(NormalisedTransaction).where(NormalisedTransaction.id == single_id)
+            ).one()
+            category = (
+                ExceptionCategory.PARTIAL_MATCH if split else ExceptionCategory.NETTED_SETTLEMENT
+            )
+            members = first.matched_fields["member_transaction_ids"]
+            candidates.append(
+                _Candidate(
+                    category=category,
+                    dedupe_key=f"{category.value}:group:{group_id}",
+                    bank_code=bank_code,
+                    affected_records={
+                        "match_group_id": str(group_id),
+                        "match_result_ids": [str(r.id) for r in results],
+                        "single_transaction_id": str(single_id),
+                        "member_transaction_ids": members,
+                        "already_matched": True,
+                    },
+                    rationale=first.rationale,
+                    amount=single.amount,
+                    currency=single.currency,
+                    amount_inr_minor=self._inr_minor(single),
+                    value_date=single.txn_date,
+                )
+            )
+        return self._persist(candidates, run_id, now, batch_count=len(candidates))
+
+    # -- context -------------------------------------------------------------
+
+    def _context(self, bank_code: str) -> PairContext:
+        bank = self._banks.get(bank_code) if self._banks else None
+        return PairContext(
+            detection=self._taxonomy.detection,
+            calendar=default_calendar(bank.calendar if bank else "in"),
+            bank=bank,
+            fx=self._fx,
+            fx_tolerance_percent=bank.fx_tolerance_percent if bank else Decimal("1.5"),
+        )
+
+    def _inr_minor(self, txn: NormalisedTransaction) -> int | None:
+        """INR-equivalent in paise (AE-07). Non-INR amounts need a rate; without
+        one the value rules simply do not apply to that record."""
+        if txn.currency == "INR":
+            return txn.amount_minor
+        if self._fx is None:
+            return None
+        quote = self._fx.quote(txn.currency, txn.txn_date)
+        if quote is None:
+            return None
+        return to_inr_minor(txn.amount_minor, txn.currency, quote.rate_inr)
 
     # -- candidate building ------------------------------------------------
 
@@ -170,8 +451,8 @@ class ExceptionClassifier:
                     },
                     rationale=(
                         f"{len(rows)} rows of {ingestion_file.original_filename} failed parsing; "
-                        """a systemic format change is more likely than that many independent
-                        bad rows."""
+                        "a systemic format change is more likely than that many independent "
+                        "bad rows."
                     ),
                     ingestion_file_id=ingestion_file.id,
                 )
@@ -200,6 +481,7 @@ class ExceptionClassifier:
         as_of_date: date | None,
         stale_after_days: int | None,
     ) -> list[_Candidate]:
+        ctx = self._context(bank_code)
         by_reference: dict[str, list[NormalisedTransaction]] = {}
         for internal in internals:
             if internal.normalised_reference:
@@ -214,26 +496,144 @@ class ExceptionClassifier:
             if len(peers) != 1 or peers[0].id in paired_internals:
                 continue  # none, or ambiguous: both sides fall back to MISSING
             internal = peers[0]
-            candidate = _pair_candidate(bank_code, internal, external)
-            if candidate is None:
+            findings = analyse_pair(internal, external, ctx, matched=False)
+            if not findings:
                 continue
             paired_internals.add(internal.id)
             paired_externals.add(external.id)
-            candidates.append(candidate)
+            finding = findings[0]
+            candidates.append(
+                self._pair_candidate_from(
+                    bank_code,
+                    internal,
+                    external,
+                    finding,
+                    key=f"{finding.category.value}:pair:{internal.id}:{external.id}",
+                )
+            )
 
         for external in externals:
             if external.id not in paired_externals:
-                stale = _is_stale(external, as_of_date, stale_after_days)
                 candidates.append(
-                    _missing_candidate(ExceptionCategory.MISSING_INTERNAL, external, stale=stale)
+                    self._single_candidate(
+                        ExceptionCategory.MISSING_INTERNAL,
+                        external,
+                        ctx,
+                        as_of_date=as_of_date,
+                        stale_after_days=stale_after_days,
+                    )
                 )
         for internal in internals:
             if internal.id not in paired_internals:
-                stale = _is_stale(internal, as_of_date, stale_after_days)
                 candidates.append(
-                    _missing_candidate(ExceptionCategory.MISSING_EXTERNAL, internal, stale=stale)
+                    self._single_candidate(
+                        ExceptionCategory.MISSING_EXTERNAL,
+                        internal,
+                        ctx,
+                        as_of_date=as_of_date,
+                        stale_after_days=stale_after_days,
+                    )
                 )
         return candidates
+
+    def _pair_candidate_from(
+        self,
+        bank_code: str,
+        internal: NormalisedTransaction,
+        external: NormalisedTransaction,
+        finding: PairFinding,
+        *,
+        key: str,
+        match_result_id: uuid.UUID | None = None,
+        already_matched: bool = False,
+    ) -> _Candidate:
+        affected: dict[str, Any] = {
+            "internal_transaction_id": str(internal.id),
+            "external_transaction_id": str(external.id),
+        }
+        if match_result_id is not None:
+            affected["match_result_id"] = str(match_result_id)
+        if already_matched:
+            affected["already_matched"] = True
+        if finding.details:
+            affected["details"] = finding.details
+        return _Candidate(
+            category=finding.category,
+            dedupe_key=key,
+            bank_code=bank_code,
+            affected_records=affected,
+            rationale=f"Reference {external.normalised_reference}: {finding.why}.",
+            amount=external.amount,
+            currency=external.currency,
+            amount_inr_minor=self._inr_minor(external),
+            amount_difference_minor=finding.amount_difference_minor,
+            days_offset=finding.days_offset,
+            fuzzy_confidence=finding.fuzzy_confidence,
+            fx_variance_percent=finding.fx_variance_percent,
+            value_date=external.txn_date,
+        )
+
+    def _single_candidate(
+        self,
+        base: ExceptionCategory,
+        txn: NormalisedTransaction,
+        ctx: PairContext,
+        *,
+        as_of_date: date | None,
+        stale_after_days: int | None,
+    ) -> _Candidate:
+        """One unmatched record with no counterpart. A compliance hold outranks a
+        pending reversal, which outranks staleness, which outranks a delay."""
+        side = (
+            "bank statement but not in the internal ledger"
+            if base is ExceptionCategory.MISSING_INTERNAL
+            else "internal ledger but not in the bank statement"
+        )
+        reference = txn.normalised_reference or "(none)"
+        if has_regulatory_hold(txn, ctx.detection):
+            category = ExceptionCategory.REGULATORY_HOLD
+            rationale = _HOLD_RATIONALE.format(ref=reference)
+        elif base is ExceptionCategory.MISSING_EXTERNAL and is_posted_reversal(txn, ctx.detection):
+            category = ExceptionCategory.REVERSAL_PENDING
+            rationale = (
+                f"Reversal {reference} is posted in the internal ledger but the bank "
+                "has not settled it."
+            )
+        elif _is_stale(txn, as_of_date, stale_after_days):
+            category = ExceptionCategory.STALE_TRANSACTION
+            rationale = (
+                f"Past the reconciliation window and still unmatched: reference {reference} "
+                f"is in the {side}."
+            )
+        elif (
+            base is ExceptionCategory.MISSING_EXTERNAL
+            and ctx.bank is not None
+            and as_of_date is not None
+            and ctx.calendar.business_days_between(txn.txn_date, as_of_date) > ctx.settlement_days
+        ):
+            category = ExceptionCategory.SETTLEMENT_DELAY
+            age = ctx.calendar.business_days_between(txn.txn_date, as_of_date)
+            rationale = (
+                f"Reference {reference} is {age} business days old and the bank has not "
+                f"settled it (cycle T+{ctx.settlement_days})."
+            )
+        else:
+            category = base
+            rationale = f"Reference {reference} is in the {side}."
+        return _Candidate(
+            category=category,
+            dedupe_key=f"{category.value}:txn:{txn.id}",
+            bank_code=txn.bank_code,
+            affected_records={
+                "normalised_transaction_ids": [str(txn.id)],
+                "missing_side": base.value,
+            },
+            rationale=rationale,
+            amount=txn.amount,
+            currency=txn.currency,
+            amount_inr_minor=self._inr_minor(txn),
+            value_date=txn.txn_date,
+        )
 
     # -- persistence -------------------------------------------------------
 
@@ -245,6 +645,7 @@ class ExceptionClassifier:
         skipped = 0
         events: list[ExceptionEvent] = []
         audited: list[tuple[uuid.UUID, _Candidate, RoutingDecision]] = []
+        daily = _cumulative_daily_inr(c for c in candidates if c.dedupe_key not in existing)
 
         for candidate in candidates:
             if candidate.dedupe_key in existing:
@@ -254,8 +655,13 @@ class ExceptionClassifier:
                 ExceptionContext(
                     category=candidate.category,
                     amount_inr_minor=candidate.amount_inr_minor,
+                    cumulative_daily_inr_minor=daily.get(
+                        (candidate.bank_code, candidate.value_date)
+                    ),
                     amount_difference_minor=candidate.amount_difference_minor,
                     days_offset=candidate.days_offset,
+                    fuzzy_confidence=candidate.fuzzy_confidence,
+                    fx_variance_percent=candidate.fx_variance_percent,
                     bank_batch_exception_count=batch_count,
                 ),
                 self._taxonomy,
@@ -328,6 +734,36 @@ class ExceptionClassifier:
                 rationale=f"{candidate.rationale} Routing: {decision.rationale}.",
             )
 
+    def _duplicate_candidate(
+        self, bank_code: str, original: NormalisedTransaction, copy: NormalisedTransaction
+    ) -> _Candidate:
+        category = (
+            ExceptionCategory.DUPLICATE_INTERNAL
+            if copy.source == "INTERNAL"
+            else ExceptionCategory.DUPLICATE_EXTERNAL
+        )
+        same_file = copy.ingestion_file_id == original.ingestion_file_id
+        where = "the same file" if same_file else "a different ingestion file"
+        return _Candidate(
+            category=category,
+            dedupe_key=f"{category.value}:txn:{copy.id}",
+            bank_code=bank_code,
+            affected_records={
+                "normalised_transaction_ids": [str(copy.id)],
+                "original_transaction_id": str(original.id),
+                "same_ingestion_file": same_file,
+            },
+            rationale=(
+                f"""Reference {copy.normalised_reference} with identical amount,
+                currency, direction and date """
+                f"already exists as transaction {original.id} ({where}, ingested first)."
+            ),
+            amount=copy.amount,
+            currency=copy.currency,
+            amount_inr_minor=self._inr_minor(copy),
+            value_date=copy.txn_date,
+        )
+
     def _existing_keys(self, keys: list[str]) -> set[str]:
         found: set[str] = set()
         for start in range(0, len(keys), _KEY_CHUNK):
@@ -339,7 +775,9 @@ class ExceptionClassifier:
             )
         return found
 
-    def _duplicate_candidates(self, bank_code: str) -> tuple[list[_Candidate], set[uuid.UUID]]:
+    def _duplicate_candidates(
+        self, bank_code: str, date_from: date | None = None, date_to: date | None = None
+    ) -> tuple[list[_Candidate], set[uuid.UUID]]:
         """Reports every copy after the first (earliest ingestion, then line,
         then id) of a transaction sharing source, reference, amount,
         currency, direction and date. Ignores match status."""
@@ -352,12 +790,17 @@ class ExceptionClassifier:
             nt.direction,
             nt.txn_date,
         )
+        in_range = [nt.bank_code == bank_code]
+        if date_from is not None:
+            in_range.append(nt.txn_date >= date_from)
+        if date_to is not None:
+            in_range.append(nt.txn_date <= date_to)
         keys = [
             tuple(row)
             for row in self._session.execute(
                 select(*key_columns)
                 .where(
-                    nt.bank_code == bank_code,
+                    *in_range,
                     nt.normalised_reference.is_not(None),
                     nt.normalised_reference != "",
                 )
@@ -387,17 +830,13 @@ class ExceptionClassifier:
                 original, *copies = group
                 for copy in copies:
                     duplicate_ids.add(copy.id)
-                    candidates.append(_duplicate_candidate(bank_code, original, copy))
+                    candidates.append(self._duplicate_candidate(bank_code, original, copy))
         return candidates, duplicate_ids
 
 
 def _error_codes(row: RawTransaction) -> str:
     errors = (row.parse_errors or {}).get("errors", [])
     return ", ".join(sorted({e["code"] for e in errors})) or "unspecified"
-
-
-def _inr_minor(txn: NormalisedTransaction) -> int | None:
-    return txn.amount_minor if txn.currency == "INR" else None
 
 
 def _is_stale(
@@ -408,101 +847,11 @@ def _is_stale(
     return (as_of_date - txn.txn_date).days > stale_after_days
 
 
-def _duplicate_candidate(
-    bank_code: str, original: NormalisedTransaction, copy: NormalisedTransaction
-) -> _Candidate:
-    category = (
-        ExceptionCategory.DUPLICATE_INTERNAL
-        if copy.source == "INTERNAL"
-        else ExceptionCategory.DUPLICATE_EXTERNAL
-    )
-    same_file = copy.ingestion_file_id == original.ingestion_file_id
-    where = "the same file" if same_file else "a different ingestion file"
-    return _Candidate(
-        category=category,
-        dedupe_key=f"{category.value}:txn:{copy.id}",
-        bank_code=bank_code,
-        affected_records={
-            "normalised_transaction_ids": [str(copy.id)],
-            "original_transaction_id": str(original.id),
-            "same_ingestion_file": same_file,
-        },
-        rationale=(
-            f"""Reference {copy.normalised_reference} with identical amount,
-            currency, direction and date """
-            f"already exists as transaction {original.id} ({where}, ingested first)."
-        ),
-        amount=copy.amount,
-        currency=copy.currency,
-        amount_inr_minor=_inr_minor(copy),
-    )
-
-
-def _missing_candidate(
-    category: ExceptionCategory, txn: NormalisedTransaction, *, stale: bool = False
-) -> _Candidate:
-    side = (
-        "bank statement but not in the internal ledger"
-        if category is ExceptionCategory.MISSING_INTERNAL
-        else "internal ledger but not in the bank statement"
-    )
-    final = ExceptionCategory.STALE_TRANSACTION if stale else category
-    prefix = (
-        "Past the reconciliation window and still unmatched: reference" if stale else "Reference"
-    )
-    return _Candidate(
-        category=final,
-        dedupe_key=f"{final.value}:txn:{txn.id}",
-        bank_code=txn.bank_code,
-        affected_records={
-            "normalised_transaction_ids": [str(txn.id)],
-            "missing_side": category.value,
-        },
-        rationale=f"{prefix} {txn.normalised_reference or '(none)'} is in the {side}.",
-        amount=txn.amount,
-        currency=txn.currency,
-        amount_inr_minor=_inr_minor(txn),
-    )
-
-
-def _pair_candidate(
-    bank_code: str, internal: NormalisedTransaction, external: NormalisedTransaction
-) -> _Candidate | None:
-    category: ExceptionCategory
-    difference: int | None = None
-    days: int | None = None
-
-    if internal.direction != external.direction:
-        if internal.amount_minor != external.amount_minor or internal.currency != external.currency:
-            return None  # opposite direction AND a different amount: not confidently a reversal
-        category = ExceptionCategory.DIRECTION_REVERSAL
-        why = f"direction {internal.direction} internally but {external.direction} at the bank"
-    elif internal.currency != external.currency:
-        category = ExceptionCategory.CURRENCY_MISMATCH
-        why = f"currency {internal.currency} internally but {external.currency} at the bank"
-    elif internal.amount_minor != external.amount_minor:
-        category = ExceptionCategory.AMOUNT_MISMATCH
-        difference = abs(internal.amount_minor - external.amount_minor)
-        why = f"amounts differ by {difference} minor unit(s)"
-    elif internal.txn_date != external.txn_date:
-        category = ExceptionCategory.DATE_MISMATCH
-        days = abs((internal.txn_date - external.txn_date).days)
-        why = f"dates differ by {days} day(s)"
-    else:
-        return None  # identical on every compared field: not an exception
-
-    return _Candidate(
-        category=category,
-        dedupe_key=f"{category.value}:pair:{internal.id}:{external.id}",
-        bank_code=bank_code,
-        affected_records={
-            "internal_transaction_id": str(internal.id),
-            "external_transaction_id": str(external.id),
-        },
-        rationale=f"Same reference {external.normalised_reference}; {why}.",
-        amount=external.amount,
-        currency=external.currency,
-        amount_inr_minor=_inr_minor(external),
-        amount_difference_minor=difference,
-        days_offset=days,
-    )
+def _cumulative_daily_inr(candidates: Iterable[_Candidate]) -> dict[tuple[str, date | None], int]:
+    """Total INR-equivalent value per (bank, day) across a batch: A4.2's
+    cumulative daily threshold sends the day's exceptions to a senior manager."""
+    totals: dict[tuple[str, date | None], int] = defaultdict(int)
+    for candidate in candidates:
+        if candidate.amount_inr_minor is not None and candidate.value_date is not None:
+            totals[(candidate.bank_code, candidate.value_date)] += candidate.amount_inr_minor
+    return dict(totals)
