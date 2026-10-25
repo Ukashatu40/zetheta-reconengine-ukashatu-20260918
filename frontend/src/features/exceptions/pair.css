@@ -1,0 +1,108 @@
+.pair {
+  display: grid;
+  gap: var(--space-3);
+}
+.pair__slips {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4.5rem minmax(0, 1fr);
+  align-items: center;
+}
+.slip {
+  background: var(--raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-2);
+  padding: var(--space-4);
+  align-self: stretch;
+}
+.slip--empty {
+  background: transparent;
+  border-style: dashed;
+  color: var(--muted);
+}
+.slip h4 {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-display);
+  font-size: var(--step-1);
+}
+.slip h4 span {
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.slip dl {
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+.slip dl > div {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: var(--space-3);
+  font-size: var(--step--1);
+}
+.slip dt {
+  color: var(--muted);
+}
+.slip dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.slip dl > div[data-differs] dd {
+  color: var(--danger);
+  font-weight: 600;
+  text-decoration: underline wavy color-mix(in srgb, var(--danger) 60%, transparent);
+  text-underline-offset: 3px;
+}
+.slip__narration {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--rule-soft);
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.pair__line {
+  width: 100%;
+  height: auto;
+  stroke: var(--tally);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+.pair__line[data-linked='false'] {
+  stroke: var(--danger);
+}
+.pair__line .pair__gap {
+  stroke: var(--sheet);
+  stroke-width: 8;
+}
+.pair__caption {
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+.pair__rest {
+  font-size: var(--step--1);
+}
+.pair__rest ul {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+}
+.pair__rest li {
+  display: grid;
+  grid-template-columns: 6rem 1fr 9rem 7rem;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+}
+@media (max-width: 62rem) {
+  .pair__slips {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+  .pair__line {
+    display: none;
+  }
+}

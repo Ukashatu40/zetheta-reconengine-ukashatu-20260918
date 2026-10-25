@@ -1,0 +1,109 @@
+/* Design tokens. Two themes share one system: "Clearing house" (light) and "Night desk" (dark).
+   Components read only these custom properties, never raw colours. */
+
+:root {
+  --font-display: 'Bricolage Grotesque Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-ui: 'Geist Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Type scale: 1.2 ratio from 14px, tight at the small end because this is a dense tool. */
+  --step--1: 0.8125rem;
+  --step-0: 0.9375rem;
+  --step-1: 1.125rem;
+  --step-2: 1.375rem;
+  --step-3: 1.75rem;
+  --step-4: 2.25rem;
+  --step-5: 3.5rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  --radius-1: 3px;
+  --radius-2: 6px;
+  --spine-width: 13.5rem;
+  --content-max: 92rem;
+  --focus: 2px solid var(--accent);
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* Clearing house */
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+  --ground: #e7ecf0;
+  --sheet: #f7f9fa;
+  --raised: #ffffff;
+  --ink: #0f2230;
+  --ink-soft: #2b3f4f;
+  --muted: #566676;
+  --rule: #c8d2da;
+  --rule-soft: #dbe3e9;
+  --accent: #2a4bd7;
+  --accent-ink: #ffffff;
+  --accent-tint: #dfe6fb;
+  --danger: #c4372b;
+  --warn: #9a5f0c;
+  --ok: #17796a;
+  --sev-critical: #b3261e;
+  --sev-high: #c4562b;
+  --sev-medium: #a8680f;
+  --sev-low: #566676;
+  --tally: #0f2230;
+  --scrim: rgb(15 34 48 / 0.45);
+}
+
+/* Night desk */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --ground: #0c1217;
+    --sheet: #131b22;
+    --raised: #19232c;
+    --ink: #e4ecf2;
+    --ink-soft: #c3d0da;
+    --muted: #8796a3;
+    --rule: #25313b;
+    --rule-soft: #1d2831;
+    --accent: #8ba3ff;
+    --accent-ink: #0c1217;
+    --accent-tint: #1f2a4d;
+    --danger: #ff7364;
+    --warn: #e3a743;
+    --ok: #52c7a6;
+    --sev-critical: #ff7364;
+    --sev-high: #ff9460;
+    --sev-medium: #e3a743;
+    --sev-low: #8796a3;
+    --tally: #e4ecf2;
+    --scrim: rgb(0 0 0 / 0.6);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --ground: #0c1217;
+  --sheet: #131b22;
+  --raised: #19232c;
+  --ink: #e4ecf2;
+  --ink-soft: #c3d0da;
+  --muted: #8796a3;
+  --rule: #25313b;
+  --rule-soft: #1d2831;
+  --accent: #8ba3ff;
+  --accent-ink: #0c1217;
+  --accent-tint: #1f2a4d;
+  --danger: #ff7364;
+  --warn: #e3a743;
+  --ok: #52c7a6;
+  --sev-critical: #ff7364;
+  --sev-high: #ff9460;
+  --sev-medium: #e3a743;
+  --sev-low: #8796a3;
+  --tally: #e4ecf2;
+  --scrim: rgb(0 0 0 / 0.6);
+}
