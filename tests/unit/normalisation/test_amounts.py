@@ -66,11 +66,11 @@ def test_rounding_mode_is_configurable() -> None:
     [
         ("C", 1),
         ("c", 1),
-        ("RC", 1),
+        ("RC", -1),
         ("CRDT", 1),
         ("D", -1),
         ("d", -1),
-        ("RD", -1),
+        ("RD", 1),
         ("DBIT", -1),
     ],
 )

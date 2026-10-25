@@ -30,9 +30,12 @@ instant. Canonical fields that must match what the statement says
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+_FORMAT_HAS_TIME = re.compile(r"%[HIMSfp]")
 
 
 class TimestampNormalisationError(ValueError):
@@ -84,7 +87,8 @@ def normalise_timestamp(
         # via aware_local.replace(tzinfo=zone) below. Attaching a
         # timezone at this intermediate step would be discarded anyway
         # by .date(), so naive parsing is correct, not an oversight.
-        parsed_date = datetime.strptime(date_text.strip(), date_format).date()  # noqa: DTZ007
+        parsed = datetime.strptime(date_text.strip(), date_format)  # noqa: DTZ007
+        parsed_date = parsed.date()
     except ValueError as exc:
         raise TimestampNormalisationError(
             f"{date_text!r} does not match expected format {date_format!r}"
@@ -98,6 +102,11 @@ def normalise_timestamp(
                 f"{time_text!r} does not match expected time format {time_format!r}"
             ) from exc
         naive_local = datetime.combine(parsed_date, parsed_time)
+    elif _FORMAT_HAS_TIME.search(date_format):
+        # A format such as "%d-%m-%Y %H:%M" carries the time in the same value. It used to be
+        # parsed and then discarded, so every such entry became midnight (IB-12) and a booking
+        # at 23:40 and one at 00:15 looked a full day apart instead of 35 minutes.
+        naive_local = parsed
     else:
         naive_local = datetime.combine(parsed_date, datetime.min.time())
 
