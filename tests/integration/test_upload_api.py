@@ -174,7 +174,7 @@ def test_duplicate_content_is_409_before_any_parsing(
 ) -> None:
     make_ingestion_file(db_session, content_sha256=hashlib.sha256(_CONTENT).hexdigest())
     monkeypatch.setattr(
-        "recon.api.v1.upload.IngestionService", _ExplodingIngestion
+        "recon.ingestion.pipeline.IngestionService", _ExplodingIngestion
     )  # must not be reached
     response = _post(client, _headers(db_session, Role.ANALYST))
     assert response.status_code == 409
@@ -184,8 +184,8 @@ def test_duplicate_content_is_409_before_any_parsing(
 def test_a_successful_upload_is_stored_audited_and_reported(
     client: TestClient, db_session: Session, upload_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("recon.api.v1.upload.IngestionService", _FakeIngestion)
-    monkeypatch.setattr("recon.api.v1.upload.NormalisationService", _FakeNormalisation)
+    monkeypatch.setattr("recon.ingestion.pipeline.IngestionService", _FakeIngestion)
+    monkeypatch.setattr("recon.ingestion.pipeline.NormalisationService", _FakeNormalisation)
 
     response = _post(client, _headers(db_session, Role.ANALYST))
 
@@ -201,15 +201,19 @@ def test_a_successful_upload_is_stored_audited_and_reported(
     assert stored[0].name != "stmt.csv" and stored[0].read_bytes() == _CONTENT
     row = db_session.get(IngestionFile, uuid.UUID(body["ingestion_file_id"]))
     assert row is not None and row.original_filename == "stmt.csv"
-    entry = db_session.scalars(select(AuditLog).where(AuditLog.chain_id == INGESTION_CHAIN)).one()
-    assert entry.action_type == "INGEST"
-    assert entry.after_state is not None and entry.after_state["size_bytes"] == len(_CONTENT)
+    entries = db_session.scalars(
+        select(AuditLog).where(AuditLog.chain_id == INGESTION_CHAIN).order_by(AuditLog.sequence_no)
+    ).all()
+    assert [e.action_type for e in entries] == ["INGEST", "NORMALISE"]  # A4.3: every stage
+    assert entries[0].after_state is not None
+    assert entries[0].after_state["size_bytes"] == len(_CONTENT)
+    assert entries[1].after_state is not None and entries[1].after_state["normalised_count"] == 2
 
 
 def test_a_processing_failure_is_422_and_rolls_back_and_deletes_the_file(
     client: TestClient, db_session: Session, upload_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("recon.api.v1.upload.IngestionService", _ExplodingIngestion)
+    monkeypatch.setattr("recon.ingestion.pipeline.IngestionService", _ExplodingIngestion)
 
     response = _post(client, _headers(db_session, Role.ANALYST))
 
@@ -232,7 +236,7 @@ def test_a_duplicate_detected_during_ingestion_is_409_not_422(
 ) -> None:
     """The race the hash pre-check cannot close: another upload wins between
     the check and the insert."""
-    monkeypatch.setattr("recon.api.v1.upload.IngestionService", _DuplicateRaisingIngestion)
+    monkeypatch.setattr("recon.ingestion.pipeline.IngestionService", _DuplicateRaisingIngestion)
     response = _post(client, _headers(db_session, Role.ANALYST))
     assert response.status_code == 409
     assert _files(upload_dir) == []

@@ -13,8 +13,17 @@ from sqlalchemy.orm import Session
 
 from recon.api.auth import Principal, require_analyst, require_viewer
 from recon.api.deps import NowDep, SessionDep
-from recon.api.v1.schemas.responses import ConfirmRequest, MatchResultOut, Page, RejectRequest
+from recon.api.v1.schemas.responses import (
+    ConfirmRequest,
+    ManualMatchRequest,
+    MatchResultOut,
+    Page,
+    RejectRequest,
+    UnmatchedOut,
+    UnmatchRequest,
+)
 from recon.audit.logger import AuditLogger
+from recon.matching.manual import ManualMatchError, ManualMatchService
 from recon.matching.review import (
     MatchNotFoundError,
     MatchNotPendingError,
@@ -95,3 +104,47 @@ def reject_match(
         session,
         lambda: service.reject(match_id, reviewer=principal.name, now=now, reason=body.reason),
     )
+
+
+@router.post("/manual", response_model=MatchResultOut, status_code=201)
+def add_manual_match(
+    body: ManualMatchRequest,
+    session: SessionDep,
+    principal: Annotated[Principal, Depends(require_analyst)],
+    now: NowDep,
+) -> MatchResultOut:
+    """An analyst pairs one internal and one external transaction that matching left apart."""
+    service = ManualMatchService(session, AuditLogger(session))
+    try:
+        result = service.create(
+            body.internal_transaction_id,
+            body.external_transaction_id,
+            user=principal.name,
+            note=body.note,
+            now=now,
+        )
+    except ManualMatchError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    out = MatchResultOut.model_validate(result)
+    session.commit()
+    return out
+
+
+@router.post("/{match_id}/unmatch", response_model=UnmatchedOut)
+def unmatch(
+    match_id: uuid.UUID,
+    body: UnmatchRequest,
+    session: SessionDep,
+    principal: Annotated[Principal, Depends(require_analyst)],
+    now: NowDep,
+) -> UnmatchedOut:
+    """Undoes an automatic or confirmed match (the whole group for a split or netted one).
+    The pair is never matched again."""
+    service = ManualMatchService(session, AuditLogger(session))
+    try:
+        results = service.unmatch(match_id, user=principal.name, reason=body.reason, now=now)
+    except ManualMatchError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    out = UnmatchedOut(match_result_ids=[r.id for r in results], status="REJECTED")
+    session.commit()
+    return out
