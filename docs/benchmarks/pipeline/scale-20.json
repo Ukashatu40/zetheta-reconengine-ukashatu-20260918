@@ -1,0 +1,46 @@
+{
+  "exact_matched": 2305,
+  "exact_matches_per_second": 1257,
+  "exact_seconds": 1.834,
+  "files": 17,
+  "fuzzy_seconds": 0.967,
+  "generation_seconds": 0.096,
+  "ingest_per_minute": 97776,
+  "ingest_records": 6701,
+  "ingest_seconds": 4.112,
+  "parse": {
+    "CAMT053": {
+      "per_minute": 177262,
+      "records": 206,
+      "seconds": 0.0697
+    },
+    "CSV": {
+      "per_minute": 1581361,
+      "records": 5895,
+      "seconds": 0.2237
+    },
+    "MT940": {
+      "per_minute": 1038541,
+      "records": 600,
+      "seconds": 0.0347
+    }
+  },
+  "peak_rss_mb": 108.9,
+  "run_seconds": {
+    "AXIS": 0.564,
+    "HDFC": 3.032,
+    "ICICI": 2.231,
+    "INDB": 0.542,
+    "KOTAK": 0.632,
+    "SBI": 0.434,
+    "YESB": 0.39
+  },
+  "scale": 20,
+  "scenarios": 3329,
+  "targets_per_minute": {
+    "ALL": 100000,
+    "CAMT053": 30000,
+    "CSV": 150000,
+    "MT940": 50000
+  }
+}

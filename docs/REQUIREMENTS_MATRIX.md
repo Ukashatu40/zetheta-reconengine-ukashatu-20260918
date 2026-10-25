@@ -1,16 +1,81 @@
 # Requirements Traceability Matrix
 
-Tracks every PDF requirement referenced so far against its implementation,
-tests, and documentation. Statuses are exactly PASS / PARTIAL / MISSING /
-NOT APPLICABLE, per the PDF's own Final Audit format (Part D) — no vaguer
-label is used.
+Status per requirement area of the specification, using the PDF's own audit vocabulary:
+PASS / PARTIAL / MISSING / NOT APPLICABLE. Evidence is a module, a test or a measured result;
+anything unmet is stated, with its reason. Corrections to the PDF are in
+[ASSESSMENT_ERRORS_AND_CORRECTIONS.md](ASSESSMENT_ERRORS_AND_CORRECTIONS.md) (AE, IB, DD ids).
 
-This matrix is updated at the end of every work package, not
-retroactively reconstructed at the end of the project. Requirements not
-yet touched by any work package are omitted rather than listed as
-MISSING — they'll be added as each WP begins.
+Last reviewed against the backend as of the branch `feature/backend-completion`. The frontend,
+the Part B simulation write-up and the consolidated submission PDF are not part of this backend
+pass and are listed at the end as MISSING.
 
----
+## Part A: system requirements
+
+| Section | Requirement | Status | Evidence and notes |
+|---|---|---|---|
+| A1.1-A1.4 | Domain background | NOT APPLICABLE | Context for the design, no deliverable. |
+| A2.1 | MT940 parsing, state machine, five bank deviations | PASS | `ingestion/parsers/mt940/`; AE-01, AE-14. Statement balances reconciled against transactions (`ingestion/balances.py`). |
+| A2.2 | CAMT.053 parsing with lxml and XPath | PARTIAL | `parsers/camt053/`, hardened parser (XXE and entity expansion tested). XSD validation (R29) not implemented: DD-02. |
+| A2.3 | Configurable CSV parsing for at least three banks | PASS | Seven bank configs (`config/banks/`: HDFC, ICICI, AXIS, SBI, KOTAK, YESB, INDB), JSON-schema validated, hot-swappable and versioned; validator CLI. |
+| A2.4 | Normalisation mapping | PASS | `normalisation/`; timestamps, direction, currency, amount, reference, counterparty; IB-01, IB-12. |
+| A3.1 | Exact matching, O(N+M), no transaction consumed twice | PASS | Set-based SQL stage (default) and Python stage; claims ledger; AE-16, DD-21, DD-22. |
+| A3.2 | Fuzzy matching with RapidFuzz and blocking | PASS | `strategies/fuzzy.py`, `blocking/`, `scoring/`; AE-06, AE-09, AE-37. |
+| A3.3 | Rule-based matching: tolerance, date offset, fee, truncation, split, netted, cross-currency | PARTIAL | Amount tolerance and business-day date offset are registry rules per bank; split, netted and cross-currency are `group` and `cross_currency` strategies (subset-sum DP, FX at booking date); fee and truncation are handled at exception stage by the auto-resolver. `DateOffsetRule` is redundant behind the exact key (DD-23). Group matches have no review band (DD-24). |
+| A3.4 | Weighted confidence, configurable weights, review band | PASS | `config/matching/weights.yaml`; review confirm and reject; manual matching; AE-08. |
+| A4.1 | 18 exception categories (+ SETTLEMENT_DELAY) | PASS | All 19 reachable and planted in the golden dataset; `excmgmt/`; DD-07. |
+| A4.2 | Four-tier routing, SLAs, escalation, auto-resolution | PASS | `routing.py`, `sla.py`, `escalation.py`, `queues.py`, `autoresolve/`; no external notification channel (events and audit entries only). |
+| A4.3 | Audit trail: append-only, tamper-evident | PASS with limit | Hash chain, DB trigger and revoked privileges, verifier, exported anchors; same PostgreSQL instance, not physical WORM (AE-19, DD-12, DD-31). |
+| A5.1 | FX conversion reconciliation | PARTIAL | Rate store with upload and outlier flagging, INR pivot, per-date rates, variance exceptions. No live rate-feed integration: rates arrive as files. |
+| A5.2 | Timezone normalisation | PASS | Bank time zone to UTC, DST handled, original text kept; AE-33. |
+| A5.3 | Settlement-cycle alignment | PARTIAL | Business-day calendar and per-bank expected settlement time and offset; the calendar covers 2026 only (`config/calendars/in-2026.yaml`). |
+| A6.1 | Performance targets | PARTIAL | See [PERFORMANCE.md](PERFORMANCE.md). Met: per-format parsing, end-to-end ingestion (118,000 records/min), fuzzy within 60 s at 188,000 records. Not met: exact matching of 500,000 records (34.6 s against 10 s), fuzzy at 500,000 records (75.9 s). Peak memory 1.0 GB at 498,200 records; 1 million not measured. |
+| A6.2 | Schema: partitioning, indexes, idempotent runs | PASS | [DATABASE.md](DATABASE.md); monthly partitions through 2026-12 plus default; idempotency key; one active run per bank. |
+| A7.1 | RBI payment-aggregator controls | PARTIAL | SETTLEMENT_DELAY detection and per-bank settlement expectations, monitoring alerts. Escrow-balance tracking (clause 7.1) is not implemented. |
+| A7.2 | Audit support: chain of custody, deterministic reruns, exportable reports | PASS | Chain of custody through the audit trail and file re-verification; deterministic processing (golden determinism test); CSV and HTML exports of audit and exceptions, compliance report. |
+| A7.3 | GST and TCS reconciliation | NOT APPLICABLE | The PDF marks it as awareness, not a deliverable. |
+| A8.1 | Synthetic data, planted exceptions, no production data | PASS | `recon.samples`, seeded and deterministic, all three formats; `make seed`. |
+| A8.2 | Unit, integration, regression, performance, chaos tests | PASS | About 1,270 test cases ([TESTING.md](TESTING.md)); every fixed bug has a regression test (IB-nn). Performance tests cover parsing; chaos tests do not include database connection drops. |
+| A8.3 | Golden dataset: 100 exact, 50 fuzzy, 5 split, 5 netted, all categories, CI gate | PASS | `data/golden/manifest.json`, `tests/golden/`, pre-commit hook and CI step. |
+| A9.1 | Confidential data: AES-256 at rest, TLS 1.3, RBAC, secure deletion | PARTIAL | RBAC is built. Encryption at rest and TLS are deployment responsibilities (`SECURITY.md`); no automated retention or secure deletion. |
+| A9.2 | Four roles | PASS | `security/rbac.py`, per-route role dependencies, route-protection test, security tests. |
+| A9.3 | PCI: PAN masking, no PAN in logs or exception reports | PASS | Masked at ingestion before persistence (AE-26, DD-25); test proves no full number in any table. |
+
+## Part B: scenarios (B4)
+
+| Scenario | Status | Evidence |
+|---|---|---|
+| B4.1 Midnight format change | PASS | Format-change detection blocks the file and raises an alert; versioned configs; validation CLI; hot reload without restart. |
+| B4.2 Cross-border netting | PASS | `group.py` handles cross-currency netting; the PDF's figures do not reconcile (AE-32), so both the corrected and as-written cases are in the golden data. |
+| B4.3 Reconciliation debt | PASS | Backlog recovery: newest day first, parallel banks, FAST then FULL, recovery report; reconcile-on-upload (DD-26). |
+| B4.4 Duplicate settlement | PASS | Cross-file settlement uniqueness check, `DUPLICATE_SETTLEMENT` alert, match-rate above 99.5% alert. |
+| B (simulation write-up) | MISSING | `docs/SIMULATION.md` not written. |
+
+## Part C: case studies
+
+| Item | Status | Evidence |
+|---|---|---|
+| C5 Balance-level reconciliation (Wirecard) | PASS | Opening/closing balances from MT940 and CAMT compared with the transaction sums; `BALANCE_TXN_DIVERGENCE` alert. |
+| C6 PAN exposure (PCI) | PASS | As A9.3. |
+
+## Dashboard, API and operations
+
+| Requirement | Status | Evidence |
+|---|---|---|
+| Eight named REST endpoints and dashboard feeds | PASS | [API.md](API.md), generated from the application so it cannot drift. |
+| API-key authentication, Pydantic validation, rate limiting | PASS | Redis-backed fixed window, fail-open. |
+| Redis cache with 30 s TTL for the dashboard | PASS | `cache.py`, `analytics/dashboard.py`. |
+| Anomaly detection and alerts | PASS | Amount deviation, velocity, absence, volume, duplicate settlement, rate alerts; `config/anomaly/rules.yaml`. |
+| Reports: daily, ageing, audit compliance, recovery | PASS | JSON, HTML and CSV. |
+| Docker Compose, CI, pre-commit, seed script | PASS | `docker-compose.yml`, `.github/workflows/ci.yml`, `.pre-commit-config.yaml`, `make seed`. The CI workflow has not run on GitHub yet; its steps were exercised locally. |
+| Web dashboard (five views) | MISSING | `frontend/` holds no application yet. |
+| Documentation set | PASS | README, ARCHITECTURE, DATABASE, MATCHING_ENGINE, EXCEPTIONS, AUDIT, SECURITY, PERFORMANCE, TESTING, API, OPERATIONS, DECISIONS. |
+| Consolidated submission PDF, demo, v1.0 tag, repository transfer | MISSING | Not produced; the repository must be private before submission. |
+
+## Detail: ingestion and normalisation requirement ids (R-numbers)
+
+The tables below were written per work package and remain accurate for the parsing and
+normalisation layers. Matching, exception, audit and API rows that used to follow them were
+replaced by the table above, because their statuses had gone stale.
 
 ## WP1 — Foundations (domain model, persistence core)
 
@@ -58,58 +123,3 @@ MISSING — they'll be added as each WP begins.
 
 - Quarantined (structurally invalid) `RawTransaction` rows are excluded from normalisation with no exception raised anywhere yet — visible only as an absence, not as a recorded FORMAT_ERROR. This is the direct predecessor problem WP4's exception-classification work (category #14) is meant to solve.
 - `NormalisationRepository.save`'s full field-by-field mapping (25+ columns) has passing test coverage but has not been independently re-derived/audited field-by-field beyond what the tests exercise — flagged as the single least-verified piece of code in WP3.
-
-## WP4 (in progress): Matching
-
-| Req   | Description                                                                         | Implementation                                                                  | Test                                                                      | Status                                                                                                                                                                                                                                                                                      |
-| ----- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- |
-| A3.1  | No transaction consumed twice                                                       | `match_claims` unique partial index; `ClaimsService` (savepoints, `claim_pair`) | `tests/integration/test_match_claims.py`                                  | PASS                                                                                                                                                                                                                                                                                        |
-| R46   | Hash-based exact matching, O(N+M)                                                   | `strategies/exact.py`, `keys.py` (AE-16)                                        | `tests/integration/test_exact_matching.py`                                | PASS                                                                                                                                                                                                                                                                                        |
-| R47   | Collision disambiguation                                                            | closest `txn_date` among bucket candidates                                      | `test_hash_collision_disambiguated_by_closest_txn_date`                   | PARTIAL: narration similarity not used, and IB-05 (claimed candidates reused) is open                                                                                                                                                                                                       |
-| R48   | Exact matches at confidence 1.00                                                    | `MatchResult` written by exact strategy                                         | `test_exact_match_is_recorded_and_both_sides_claimed`                     | PASS                                                                                                                                                                                                                                                                                        |
-| R49   | RapidFuzz: Jaro-Winkler 0.92, Token Set Ratio 0.80, Levenshtein ≤2 for refs ≥12     | `scoring/fields.py`                                                             | `tests/unit/matching/test_fields.py`                                      | PASS                                                                                                                                                                                                                                                                                        |
-| A3.4  | Human review of the 0.60-0.85 band                                                  | matching/review.py, api/v1/matches.py                                           | test_match_review.py, test_matches_api.py                                 | PASS (no four-eyes; decisions final)                                                                                                                                                                                                                                                        |     |
-| R50   | Candidate blocking before scoring                                                   | `blocking/candidates.py` (AE-06)                                                | `tests/unit/matching/test_candidates.py`                                  | PASS                                                                                                                                                                                                                                                                                        |
-| R51   | Weighted confidence, **configurable** thresholds                                    | `scoring/weighted.py` (AE-08, AE-09)                                            | `tests/unit/matching/test_weighted.py`                                    | PARTIAL: weights and thresholds are module constants, not configurable. The PDF says they must be.                                                                                                                                                                                          |
-| R57   | MatchingOrchestrator with metrics                                                   | `matching/orchestrator.py` (exact then fuzzy)                                   | `tests/integration/test_orchestrator.py`                                  | PARTIAL: no processing time or per-run match rate recorded (Day 3); no `reconciliation_runs` table                                                                                                                                                                                          |
-| I2    | Weaker match never overrides a stronger one                                         | re-fetch of the unmatched pool between levels                                   | `test_exact_match_is_found_first_and_fuzzy_never_sees_it`                 | PASS                                                                                                                                                                                                                                                                                        |
-| Day 3 | Above 95% exact of matchable, above 85% overall, on 1,000 records                   | `recon/bench/`                                                                  | `docs/benchmarks/baseline/size-1000-seed-42.json`                         | MEASURED, NOT COMPARABLE: on the synthetic mix 82.9% of true pairs matched exactly and 83.9% of externals auto-matched; both rates are set by the scenario weights                                                                                                                          |
-| A6.1  | 500,000 exact matches in under 10 s                                                 | `recon/bench/`, `matching/strategies/exact_set_based.py`                        | `docs/benchmarks/baseline/`, `docs/benchmarks/set-based-exact/`           | NOT MET: at 20,000 entities the exact stage matched 13,600 pairs in 2.1 to 2.9 s over five runs (about 4,600 to 6,400 per second; Python stage 97 per second); the statement alone ran at about 7,400 per second at 100,000 entities; the target needs 50,000 per second; no run at 500,000 |     |
-| AE-10 | Review-band rows written as PENDING_REVIEW                                          | `match_results` check constraint                                                | `test_review_band_pair_is_written_pending_review_claimed_but_not_matched` | PARTIAL: no reviewer workflow to confirm or reject                                                                                                                                                                                                                                          |
-| —     | Rule-based (tolerance, date offset, fee, truncation), split, netted, cross-currency | none                                                                            | none                                                                      | MISSING                                                                                                                                                                                                                                                                                     |
-| R52   | Rule engine as ordered Rule objects                                                 | `matching/rules/base.py`; `strategies/rule_based.py`                            | `test_rules_base.py`, `test_rule_based_matching.py`                       | PARTIAL: one concrete rule; strategy not yet wired into the orchestrator                                                                                                                                                                                                                    |
-| R53   | Amount Tolerance Rule, configurable per currency                                    | `matching/rules/amount_tolerance.py`                                            | `test_amount_tolerance_rule.py`                                           | PARTIAL: same-currency only; cross-currency needs FX; tolerance is constructor-configured, not yet loaded from YAML                                                                                                                                                                         |
-
-## WP5: Exceptions
-
-| R33 | Reject files with duplicate content hash | `ingestion_files.content_sha256` unique, `DuplicateFileError` | `test_duplicate_file_content_is_rejected_before_any_transactions_are_written` | PASS |
-| R34 | Settlement uniqueness check across files by reference | classifier duplicate detection (DD-13) | `test_duplicate_external_in_a_later_file_is_found_even_when_both_are_matched` | PARTIAL: per-transaction, not set-level; does not unmatch |
-| R35 | Alert when match rate exceeds 99.5% | none | none | MISSING |
-| R60 | 18 categories as an Enum (+SETTLEMENT_DELAY) | `domain/enums.py`, `config/exceptions/taxonomy.yaml` | `test_taxonomy.py` | PASS |
-| R62 | Severity levels, independent of SLA | `excmgmt/routing.py` (AE-07) | `test_routing.py` | PASS |
-| R64 | Four-tier routing | `excmgmt/routing.py` | `test_routing.py` | PARTIAL: no queues; scanner exists |
-| R66 | SLA monitoring and breach escalation | `tier_after_sla_check` | `test_routing.py` | PASS: pure function; no scanner, no notification events |
-| R61 | Classifier with rules per category | `excmgmt/classifier.py` | `test_exception_classifier.py` | PARTIAL: 7 of 19 categories detected |
-| R63 | Exceptions table (category, severity, affected records, resolution, tier, SLA) | `persistence/models/exceptions.py` | `test_exception_persistence.py` | PASS |
-| R65 | EscalationManager | `excmgmt/sla.py`, `routing.py` | `test_sla_scanner.py` | PARTIAL: no analyst queue or assignment; Tier 1 auto-resolution actions not implemented (DD-08) |
-| R66 | SLA monitoring, breach escalation, notification events | `excmgmt/sla.py`, `exception_events` | `test_sla_scanner.py` | PASS (events are the simulated notifications) |
-| R71 | Audit every action | none yet | none | MISSING: classifier and scanner write no audit entries | add that upload is audited
-| R68 | AuditLogger, append-only | `audit/logger.py`; trigger and grants (WP1) | `test_audit_logger.py`, `test_audit_log_append_only.py` | PARTIAL: not written through the `recon_audit` role; same database |
-| R69 | Entry fields incl. UUID, microsecond UTC, before/after state, hash | `audit/canonical.py` | `test_canonical.py` | PASS |
-| R70 | Tamper-evident chain and verifier reporting tampered entries | `audit/verifier.py` | `test_audit_verifier.py` | PASS (tail truncation needs an anchor; none exported) |
-| R71 | Audit every pipeline action | classifier and SLA scanner only | `test_exception_audit.py` | PARTIAL: ingestion, normalisation, matching, resolution and override are not audited |
-| R75 | Eight named endpoints under /api/v1 plus dashboard banks and timeline | `api/v1/{exceptions,audit,dashboard}.py` | `tests/integration/test_api.py` | PARTIAL: exceptions list/resolve, audit, dashboard summary done; runs (3), upload, banks, timeline missing | | A6.2 | Idempotent runs, concurrent-run protection | `runs/service.py`, `ux_reconciliation_runs_one_running_per_bank` | `test_runs_service.py`, `test_runs_api.py` | PARTIAL: synchronous, no PENDING state, no checkpoints or resume | change to "reconcile, runs, results, upload done; banks and timeline dashboard endpoints missing." "match review endpoints done"
-| R76 | Pydantic validation, API-key auth, rate limiting | `api/auth.py`, `api/v1/schemas/` | `test_api.py`, `test_route_protection.py` | PARTIAL: rate limiting not built |
-| R77 | Dashboard summary fields | `api/v1/dashboard.py` | `test_dashboard_summary_counts` | PARTIAL: no avg_processing_time or daily_trend |
-| R78 | Redis cache, 30 s TTL | none | none | MISSING |
-| R82 | OpenAPI docs | FastAPI auto-generation | none | PARTIAL: generated, not reviewed |
-| R85 | Four RBAC roles | `security/rbac.py`, `api/auth.py` | `test_route_protection.py`, `test_api.py` | PASS (resolve tiering is DD-14) |
-| Day 1 | `users` table | none | none | MISSING (DD-15) |
-
-## Not yet started
-
-Everything under Matching (L0-L7), Exception Classification, Escalation,
-full Audit application-layer writes, REST API, Dashboard, Anomaly
-Detection, Reporting, and Performance benchmarking. These sections will
-be added to this matrix as their work packages begin — see
-`docs/DECISIONS.md` (not yet created) for the planned WP breakdown.
