@@ -67,7 +67,7 @@ pass and are listed at the end as MISSING.
 | Anomaly detection and alerts | PASS | Amount deviation, velocity, absence, volume, duplicate settlement, rate alerts; `config/anomaly/rules.yaml`. |
 | Reports: daily, ageing, audit compliance, recovery | PASS | JSON, HTML and CSV. |
 | Docker Compose, CI, pre-commit, seed script | PASS | `docker-compose.yml`, `.github/workflows/ci.yml`, `.pre-commit-config.yaml`, `make seed`. The CI workflow has not run on GitHub yet; its steps were exercised locally. |
-| Web dashboard (five views) | MISSING | `frontend/` holds no application yet. |
+| Web dashboard (five views) | PASS | `frontend/`: reconciliation overview (KPI figures, daily trends, bank heatmap), exception management (filters, SLA countdown, assigned analyst, expandable records and match candidates), audit trail viewer (search, pagination, before/after diffs), file ingestion monitor, run history; plus match review, alerts and the three reports. 48 tests; see `frontend/README.md`. |
 | Documentation set | PASS | README, ARCHITECTURE, DATABASE, MATCHING_ENGINE, EXCEPTIONS, AUDIT, SECURITY, PERFORMANCE, TESTING, API, OPERATIONS, DECISIONS. |
 | Consolidated submission PDF, demo, v1.0 tag, repository transfer | MISSING | Not produced; the repository must be private before submission. |
 

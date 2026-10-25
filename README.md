@@ -29,14 +29,14 @@ hash-chained audit trail. Seven banks are configured (`config/banks/`); adding o
 
 ## Status
 
-**Backend: complete to the specification except where stated below. Frontend: not built.**
+**Backend: complete to the specification except where stated below. Web dashboard: built (`frontend/`).**
 
 | Area | State |
 |---|---|
 | Ingestion, normalisation, matching, exceptions, audit, anomalies, FX, reports, API | Built and tested (about 1,270 test cases, 95% coverage) |
 | Golden dataset and CI gate | Built (`data/golden/manifest.json`, 194 planted scenarios) |
 | Performance (A6.1) | Parsing and end-to-end ingestion (118,000 records/min) meet their targets; fuzzy matching meets 60 s at 188,000 records. **Not met:** exact matching of 500,000 records (34.6 s against 10 s) and fuzzy at 500,000 (75.9 s), and memory at 1 million records is unmeasured. Details and method in [docs/PERFORMANCE.md](docs/PERFORMANCE.md) |
-| Web dashboard | Not built (`frontend/` is empty) |
+| Web dashboard | Built: overview, exceptions with side-by-side records, match review, alerts, audit trail with diffs and chain verification, files with upload, runs. Light and dark themes, strict CSP, key held in memory only ([frontend/README.md](frontend/README.md)) |
 | TLS, encryption at rest, retention tiering | Deployment responsibilities, see [docs/SECURITY.md](docs/SECURITY.md) |
 | CAMT.053 XSD validation, RBI escrow tracking | Not implemented ([DD-02](docs/ASSESSMENT_ERRORS_AND_CORRECTIONS.md)) |
 | Part B simulation write-up, consolidated PDF | Not written |
@@ -53,11 +53,13 @@ Needs Docker, and Python 3.11 for running tests on the host.
 cp .env.example .env                       # set POSTGRES_PASSWORD, and the password inside DATABASE_URL
 docker compose up -d --build               # postgres 15, redis 7, api on :8000
 docker compose exec api alembic upgrade head
-docker compose exec api python -m recon.cli.seed          # demo data through the real pipeline
+docker compose exec api python -m recon.cli.seed --scale 3 --weeks 6   # demo data through the real pipeline
 curl localhost:8000/health/ready
+open http://localhost:8080                  # the web dashboard
 ```
 
-`seed` prints three API keys (viewer, analyst, admin) once. Then browse `http://localhost:8000/docs`,
+`seed` prints three API keys (viewer, analyst, admin) once; paste one into the dashboard at
+`http://localhost:8080`. The raw API is at `http://localhost:8000/docs`,
 or try `curl -H "X-API-Key: <key>" "localhost:8000/api/v1/dashboard/summary"`. Without the seed
 script create a key with `make api-key NAME=me ROLE=ADMIN`. `make seed SCALE=20` loads a larger volume.
 
@@ -69,6 +71,7 @@ pip install -e ".[dev]" && pre-commit install
 make migrate-test                          # creates recon_test in the compose postgres
 export TEST_DATABASE_URL="postgresql+psycopg://recon_app:<password>@localhost:5432/recon_test"
 make check                                 # black, ruff, mypy --strict, pytest
+make web-check                             # dashboard: types, lint, format, tests, build
 make golden                                # the golden-dataset gate
 make bench                                 # pipeline benchmark against the A6.1 targets
 ```
@@ -113,3 +116,4 @@ chaos, security and performance suites.
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Index of decisions |
 | [docs/ASSESSMENT_ERRORS_AND_CORRECTIONS.md](docs/ASSESSMENT_ERRORS_AND_CORRECTIONS.md) | Specification errors (AE), bugs (IB), decisions (DD) |
 | [docs/REQUIREMENTS_MATRIX.md](docs/REQUIREMENTS_MATRIX.md) | Requirement traceability |
+| [frontend/README.md](frontend/README.md) | The web dashboard: views, design, security model |

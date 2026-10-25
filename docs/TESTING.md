@@ -27,6 +27,17 @@ leave no data behind.
 About 950 test functions, around 1,270 test cases with parametrisation; line and branch coverage
 of `src/recon` is 95%.
 
+## The dashboard
+
+`frontend/` has its own gate, `npm run check`: strict TypeScript, ESLint (including a ban on
+`dangerouslySetInnerHTML`), Prettier and 48 Vitest and Testing Library tests, run in CI as the
+`frontend` job. The tests cover the API client (key header, no key in URLs, error mapping, 401
+locking), sign-in and the 15-minute idle lock, formatting and SLA logic, the audit diff, the charts
+(including the tally and the screen-reader table), role-gated actions, the "hide amounts" switch, and
+that report and diff content is shown as text. There is no end-to-end browser suite; the production
+container was driven once with a headless browser under the real Content-Security-Policy (no
+violations) and screenshots were reviewed in both themes and at phone width.
+
 ## The golden gate (A8.3)
 
 `recon.samples` generates, from a seed, 17 statement files (CSV, MT940 and CAMT.053 across seven

@@ -39,6 +39,7 @@ This page is the index of the ones that shape the system.
 | Auto-resolution never forces an unsafe action; Tier 3 value rules | DD-08, DD-28, IB-14 |
 | Hot-swappable, versioned bank configuration | DD-29 |
 | Sample and golden data | DD-32 |
+| Web dashboard: same origin, key in memory, JSON reports | DD-35 |
 
 ## Deliberately not done
 
@@ -50,4 +51,3 @@ This page is the index of the ones that shape the system.
 | Separate audit database | Separate schema and role; the anchors close the gap | AE-19, DD-12 |
 | TLS termination, encryption at rest, retention tiering | Deployment concerns, documented | `SECURITY.md` |
 | A separate worker, queue, metrics, tracing | Out of scope for a single-service build | DD-16, DD-30 |
-| Frontend | Not built yet | README |

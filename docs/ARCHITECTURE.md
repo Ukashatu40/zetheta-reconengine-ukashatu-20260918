@@ -19,7 +19,9 @@ flowchart LR
         OPS[Operations user]
         SYS[Upstream systems]
     end
-    OPS & SYS -->|X-API-Key| API[FastAPI service]
+    OPS -->|browser| WEB[nginx and dashboard]
+    WEB -->|/api, X-API-Key| API
+    SYS -->|X-API-Key| API[FastAPI service]
     API --> ING[Ingestion pipeline]
     API --> RUN[Run service]
     API --> RPT[Reports and dashboard]
@@ -106,7 +108,7 @@ written to the audit trail.
 | `src/recon/samples/`, `bench/`, `cli/` | Deterministic sample and golden data, benchmarks, command-line tools (`seed`, `golden`, `benchmark`, `create_api_key`, `validate_bank_config`). |
 | `config/` | `banks/*.v1.yaml` (7 banks) and `_schema.json`, `matching/weights.yaml`, `exceptions/taxonomy.yaml`, `anomaly/rules.yaml`, `calendars/in-2026.yaml`. |
 | `tests/` | `unit/`, `integration/` (real PostgreSQL), `golden/`, `chaos/`, `security/`, `performance/`. |
-| `frontend/` | Not built yet (see the status in the README). |
+| `frontend/` | The web dashboard (React, TypeScript, Vite), served by nginx which also proxies `/api` to the engine; types generated from the engine's OpenAPI schema. See `frontend/README.md`. |
 
 ## Persistence
 

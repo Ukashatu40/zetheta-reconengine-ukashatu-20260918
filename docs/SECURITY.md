@@ -18,6 +18,18 @@ claims a control that the code does not have.
   429 with `Retry-After`. Counters live in Redis and **fail open**: if Redis is down requests are
   not blocked.
 
+## The web dashboard
+
+`frontend/` is served by an unprivileged nginx that also forwards `/api` and `/health` to the engine,
+so the browser uses one origin and the engine needs no CORS settings. The API key is held in memory
+(or `sessionStorage` if the user opts in), never in `localStorage`, a cookie or a URL; it is dropped
+after 15 minutes without input and on any 401. Responses carry a strict Content-Security-Policy
+(no inline script, no third-party origins), `nosniff`, `X-Frame-Options: DENY`,
+`Referrer-Policy: no-referrer` and a locked-down `Permissions-Policy`. Nothing from the engine is
+rendered as HTML (reports are drawn from JSON; a lint rule forbids `dangerouslySetInnerHTML`). A "hide
+amounts" switch masks every money figure for screen sharing. TLS is still the deployer's job: put the
+dashboard's port 8080 behind a TLS-terminating proxy and add `Strict-Transport-Security` there.
+
 ## Input handling
 
 - Uploads are streamed into a UUID-named file with a 50 MB cap and an extension allow-list; the
@@ -66,7 +78,7 @@ reads. The container runs as a non-root user and has a health check.
 ## Known gaps
 
 - No per-user accounts with passwords, MFA or SSO.
-- No CSRF or CORS configuration, because there are no browser sessions; a browser front end will
-  need CORS settings added to `api/main.py`.
+- No CSRF or CORS configuration, because there are no cookie sessions and the dashboard is served
+  from the same origin as the API. A dashboard hosted on a different origin would need CORS added.
 - The rate limiter is keyed on the API key (or client address when absent) and is not a DDoS
   defence.
