@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from sqlalchemy.orm import Session
 
 from recon.config.models import BankConfig
+from recon.domain.canonical import CanonicalTransaction
 from recon.domain.enums import SourceFormat, TransactionSource
 from recon.ingestion.parsed_row import ParsedRow
 from recon.normalisation.pipeline import NormalisationError, NormalisationPipeline
@@ -51,8 +52,8 @@ class NormalisationService:
 
         raw_rows = self._repository.find_parsed_raw_transactions(uuid.UUID(ingestion_file_id))
 
-        normalised_count = 0
         failures: list[str] = []
+        pending: list[tuple[CanonicalTransaction, uuid.UUID]] = []
 
         for raw_row in raw_rows:
             parsed_row = self._reconstruct_parsed_row(raw_row)
@@ -64,11 +65,12 @@ class NormalisationService:
                 failures.append(str(exc))
                 continue
 
-            self._repository.save(canonical, raw_row.id)
-            normalised_count += 1
+            pending.append((canonical, raw_row.id))
+
+        self._repository.save_many(pending)
 
         return NormalisationResult(
-            normalised_count=normalised_count,
+            normalised_count=len(pending),
             failed_count=len(failures),
             failures=failures,
         )

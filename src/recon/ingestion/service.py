@@ -21,19 +21,33 @@ parser classes.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy.orm import Session
 
 from recon.config.models import BankConfig
+from recon.ingestion.balances import (
+    BalanceCheck,
+    camt_balances,
+    check_statement,
+    mt940_balances,
+)
+from recon.ingestion.format_check import (
+    FormatChange,
+    FormatChangeDetectedError,
+    compare_header,
+    read_header,
+)
 from recon.ingestion.integrity import compute_sha256, file_size_bytes
-from recon.ingestion.parsed_row import ParsedRow
+from recon.ingestion.pan import mask_mapping, mask_pans
+from recon.ingestion.parsed_row import ParsedRow, ParseError
 from recon.ingestion.parsers.camt053.parser import CAMT053Parser
 from recon.ingestion.parsers.csv_parser import CSVParser, open_stream
 from recon.ingestion.parsers.mt940.state_machine import MT940Parser
-from recon.persistence.models import IngestionFile
+from recon.persistence.models import IngestionFile, StatementBalance
 from recon.persistence.repositories.ingestion import IngestionRepository
 
 
@@ -44,6 +58,16 @@ class IngestionResult:
     parsed_count: int
     error_count: int
     status: str
+    pan_masked_count: int = 0
+    format_change: FormatChange | None = None
+    balance_check: BalanceCheck | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class _Parsed:
+    rows: list[ParsedRow]
+    balance_check: BalanceCheck | None = None
+    format_change: FormatChange | None = None
 
 
 class UnsupportedFormatError(ValueError):
@@ -76,6 +100,7 @@ class IngestionService:
                 f"among its supported_formats ({config.supported_formats})"
             )
 
+        parsed = self._parse(path, config, format_type)
         content_sha256 = compute_sha256(path)
         ingestion_file = self._repository.create_ingestion_file(
             bank_code=config.bank_code,
@@ -86,30 +111,99 @@ class IngestionService:
             ingested_by=self._ingested_by,
         )
 
-        rows = list(self._parse_rows(path, config, format_type))
-        return self._persist_rows(ingestion_file, rows, format_type)
+        rows, masked = self._mask_pans(parsed.rows)
+        result = self._persist_rows(ingestion_file, rows, format_type)
+        if parsed.balance_check is not None:
+            self._persist_balance(ingestion_file, parsed.balance_check)
+        return replace(
+            result,
+            pan_masked_count=masked,
+            format_change=parsed.format_change,
+            balance_check=parsed.balance_check,
+        )
 
-    def _parse_rows(self, path: Path, config: BankConfig, format_type: str) -> list[ParsedRow]:
+    @staticmethod
+    def _mask_pans(rows: list[ParsedRow]) -> tuple[list[ParsedRow], int]:
+        """Masks card numbers in every text value of every row before anything is
+        stored (AE-26). Error details are masked too: they quote the offending value."""
+        masked_total = 0
+        out: list[ParsedRow] = []
+        for row in rows:
+            raw_fields, raw_count = mask_mapping(row.raw_fields)
+            mapped, mapped_count = mask_mapping(row.mapped)
+            errors: list[ParseError] = []
+            error_count = 0
+            for error in row.errors:
+                detail = mask_pans(error.detail)
+                error_count += detail.masked_count
+                errors.append(replace(error, detail=detail.text))
+            # The same card number shows up in the raw text and in its mapped field; it is
+            # one number, so a row counts the larger of the two, not their sum.
+            count = max(raw_count, mapped_count) + error_count
+            masked_total += count
+            out.append(
+                replace(row, raw_fields=raw_fields, mapped=mapped, errors=errors) if count else row
+            )
+        return out, masked_total
+
+    def _persist_balance(self, ingestion_file: IngestionFile, check: BalanceCheck) -> None:
+        balances = check.balances
+        self._session.add(
+            StatementBalance(
+                ingestion_file_id=ingestion_file.id,
+                bank_code=ingestion_file.bank_code,
+                statement_ref=balances.statement_ref,
+                account=balances.account,
+                currency=balances.currency,
+                opening_minor=balances.opening_minor,
+                closing_minor=balances.closing_minor,
+                computed_closing_minor=check.computed_closing_minor,
+                net_entries_minor=check.net_entries_minor,
+                difference_minor=check.difference_minor,
+                entry_count=check.entry_count,
+                unparseable_entries=check.unparseable_entries,
+                balanced=check.balanced,
+                opening_date=balances.opening_date,
+                closing_date=balances.closing_date,
+            )
+        )
+        self._session.flush()
+
+    def _parse(self, path: Path, config: BankConfig, format_type: str) -> _Parsed:
         if format_type == "CSV":
             if config.csv is None:
                 raise ValueError(f"{config.bank_code}: no CSV configuration present")
             with open_stream(path, config.csv) as stream:
-                return list(CSVParser().parse(stream, config))
+                change = compare_header(config, read_header(stream, config))
+                if change.blocks_ingestion:
+                    raise FormatChangeDetectedError(config.bank_code, change)
+                rows = list(CSVParser().parse(stream, config))
+            return _Parsed(rows, format_change=change if change.has_drift else None)
 
         if format_type == "MT940":
             if config.mt940 is None:
                 raise ValueError(f"{config.bank_code}: no MT940 configuration present")
             with path.open("r", encoding="utf-8") as stream:
-                return list(MT940Parser().parse(stream, config))
+                header, rows = MT940Parser().parse_with_header(stream, config)
+            statement = mt940_balances(header, config.mt940.decimal_separator)
+            check = (
+                check_statement(statement, rows, config.mt940.decimal_separator)
+                if statement
+                else None
+            )
+            return _Parsed(rows, balance_check=check)
 
         if format_type == "CAMT053":
             with path.open("rb") as binary_stream:
-                return list(CAMT053Parser().parse(binary_stream, config))
+                camt_header, rows = CAMT053Parser().parse_with_header(binary_stream, config)
+            camt_statement = camt_balances(camt_header)
+            return _Parsed(
+                rows,
+                balance_check=check_statement(camt_statement, rows) if camt_statement else None,
+            )
 
         # Unreachable given the check in ingest_file, but kept explicit
-        # rather than relying on that earlier check alone — a future
-        # refactor that calls _parse_rows directly should not silently
-        # fall through with no rows.
+        # rather than relying on that earlier check alone.
         raise UnsupportedFormatError(f"no parser dispatch for {format_type!r}")
 
     def _persist_rows(
@@ -119,23 +213,25 @@ class IngestionService:
         error_count = 0
         parsed_count = 0
 
+        batch: list[dict[str, Any]] = []
         for row in rows:
-            parse_status = "PARSED" if row.is_valid else "QUARANTINED"
             if row.is_valid:
                 parsed_count += 1
             else:
                 error_count += 1
-
-            self._repository.add_raw_transaction(
-                ingestion_file_id=ingestion_file.id,
-                ingested_on=ingested_on,
-                bank_code=ingestion_file.bank_code,
-                format_type=format_type,
-                source_line_no=row.line_no,
-                raw_payload=self._row_to_payload(row),
-                parse_status=parse_status,
-                parse_errors=self._errors_to_payload(row) if not row.is_valid else None,
+            batch.append(
+                {
+                    "ingestion_file_id": ingestion_file.id,
+                    "ingested_on": ingested_on,
+                    "bank_code": ingestion_file.bank_code,
+                    "format_type": format_type,
+                    "source_line_no": row.line_no,
+                    "raw_payload": self._row_to_payload(row),
+                    "parse_status": "PARSED" if row.is_valid else "QUARANTINED",
+                    "parse_errors": self._errors_to_payload(row) if not row.is_valid else None,
+                }
             )
+        self._repository.add_raw_transactions(batch)
 
         total = parsed_count + error_count
         file_status = (
