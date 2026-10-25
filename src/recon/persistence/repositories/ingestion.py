@@ -13,6 +13,7 @@ import uuid
 from datetime import date
 from typing import Any
 
+from sqlalchemy import insert
 from sqlalchemy.orm import Session
 
 from recon.persistence.models import IngestionFile, RawTransaction
@@ -96,6 +97,12 @@ class IngestionRepository:
         )
         self._session.add(row)
         return row
+
+    def add_raw_transactions(self, rows: list[dict[str, Any]]) -> None:
+        """Bulk insert (one multi-row statement per batch). The ORM path cost about 0.8 ms a row,
+        ten times a Core insert, on bookkeeping for objects nothing reads back."""
+        if rows:
+            self._session.execute(insert(RawTransaction), rows)
 
     def update_file_status(
         self,

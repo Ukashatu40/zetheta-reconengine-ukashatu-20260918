@@ -4,17 +4,18 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import CheckConstraint, DateTime, Index, String, Text, UniqueConstraint, text
+from sqlalchemy import CheckConstraint, Date, DateTime, Index, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from recon.persistence.models.base import Base
 
-RUN_STATUSES = ("RUNNING", "COMPLETED", "FAILED")
+RUN_STATUSES = ("PENDING", "RUNNING", "COMPLETED", "FAILED")
+RUN_MODES = ("FAST", "FULL")
 
 
 class ReconciliationRun(Base):
@@ -26,6 +27,9 @@ class ReconciliationRun(Base):
     idempotency_key: Mapped[str] = mapped_column(String(100), nullable=False)
     bank_code: Mapped[str] = mapped_column(String(20), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="RUNNING")
+    mode: Mapped[str] = mapped_column(String(10), nullable=False, server_default="FULL")
+    date_from: Mapped[date | None] = mapped_column(Date, nullable=True)
+    date_to: Mapped[date | None] = mapped_column(Date, nullable=True)
     requested_by: Mapped[str] = mapped_column(String(100), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
@@ -39,6 +43,13 @@ class ReconciliationRun(Base):
         UniqueConstraint("idempotency_key", name="uq_reconciliation_runs_idempotency_key"),
         CheckConstraint(
             "status IN (" + ", ".join(f"'{s}'" for s in RUN_STATUSES) + ")", name="status_valid"
+        ),
+        CheckConstraint(
+            "mode IN (" + ", ".join(f"'{m}'" for m in RUN_MODES) + ")", name="mode_valid"
+        ),
+        CheckConstraint(
+            "date_from IS NULL OR date_to IS NULL OR date_from <= date_to",
+            name="date_range_ordered",
         ),
         # The concurrency guard: at most one RUNNING run per bank.
         Index(

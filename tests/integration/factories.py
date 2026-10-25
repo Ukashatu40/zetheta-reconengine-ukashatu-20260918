@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
@@ -55,6 +55,11 @@ def make_txn(ingestion_file_id: uuid.UUID, **overrides: object) -> NormalisedTra
         "match_status": "UNMATCHED",
     }
     defaults.update(overrides)
+    if "txn_timestamp_utc" not in overrides:
+        # The instant follows the date, so two rows a day apart are a day apart in time too.
+        txn_date = defaults["txn_date"]
+        assert isinstance(txn_date, date)
+        defaults["txn_timestamp_utc"] = datetime.combine(txn_date, time(12, 0), tzinfo=UTC)
     return NormalisedTransaction(**defaults)
 
 

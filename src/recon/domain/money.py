@@ -65,6 +65,11 @@ def register_currency_exponent(currency: str, exponent: int) -> None:
     _CURRENCY_EXPONENTS[currency.upper()] = exponent
 
 
+def known_currencies() -> dict[str, int]:
+    """Every registered currency with its minor-unit exponent (a copy)."""
+    return dict(_CURRENCY_EXPONENTS)
+
+
 def currency_exponent(currency: str) -> int:
     """Look up a currency's minor-unit exponent, raising if unknown."""
     try:

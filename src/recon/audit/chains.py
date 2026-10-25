@@ -4,3 +4,7 @@
 EXCEPTIONS_CHAIN = "exceptions"
 INGESTION_CHAIN = "ingestion"
 MATCHING_CHAIN = "matching"
+RUNS_CHAIN = "runs"
+CONFIG_CHAIN = "config"
+ALERTS_CHAIN = "alerts"
+USERS_CHAIN = "users"
