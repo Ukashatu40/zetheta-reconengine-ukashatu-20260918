@@ -17,15 +17,20 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
+from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from recon.config.matching_models import MatchingConfig
 from recon.matching.blocking.candidates import BlockingConfig, CandidateGenerator
 from recon.matching.claims import ClaimConflictError, ClaimsService
 from recon.matching.scoring.weighted import MatchDecision, ScoredCandidate, score_candidate
-from recon.persistence.models import MatchResult, NormalisedTransaction
+from recon.persistence.models import MatchClaim, MatchResult, NormalisedTransaction
+from recon.persistence.repositories.matching import MatchingRepository
+
+_WRITE_CHUNK = 500
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,14 +63,15 @@ class FuzzyMatchingStrategy:
         external_candidates: list[NormalisedTransaction],
     ) -> FuzzyMatchOutcome:
         generator = CandidateGenerator(internal_candidates, self._blocking_config)
-
-        auto_matched = 0
-        reviewed = 0
-        skipped_conflicts = 0
-        result_ids: list[uuid.UUID] = []
         consumed: set[uuid.UUID] = set()
-        rejected = self._rejected_pairs(internal_candidates)
+        rejected = MatchingRepository(self._session).rejected_pairs(
+            t.id for t in internal_candidates
+        )
 
+        # Phase 1, in memory: choose the best candidate for each external. No database round
+        # trip per record; the earlier version wrote each match as it went (about ten round
+        # trips each) and spent 85% of the stage waiting for the database.
+        chosen: list[tuple[ScoredCandidate, NormalisedTransaction, int]] = []
         for external_txn in external_candidates:
             candidate_set = generator.generate(external_txn)
             available = [
@@ -74,39 +80,37 @@ class FuzzyMatchingStrategy:
                 if c.id not in consumed and (c.id, external_txn.id) not in rejected
             ]
             best = self._best_candidate(external_txn, available)
-
             if best is None or best.decision == MatchDecision.NO_MATCH:
                 continue
-
-            try:
-                internal_claim, external_claim = self._claims.claim_pair(
-                    best.internal_txn.id, external_txn.id
-                )
-            except ClaimConflictError:
-                skipped_conflicts += 1
-                continue
-
-            match_result = self._create_match_result(best, candidate_count=len(available))
-            self._session.add(match_result)
-            self._session.flush()
-
-            self._claims.finalise(internal_claim, match_result.id)
-            self._claims.finalise(external_claim, match_result.id)
-
-            if best.decision == MatchDecision.AUTO_MATCH:
-                best.internal_txn.match_status = "MATCHED"
-                external_txn.match_status = "MATCHED"
-                auto_matched += 1
-            else:
-                # Review-band candidates are claimed (preventing a
-                # different candidate from also claiming either side
-                # while a human decides) but NOT marked MATCHED — that
-                # transition happens only on human confirmation, which
-                # this codebase does not yet implement (no reviewer
-                # workflow exists before WP5).
-                reviewed += 1
             consumed.add(best.internal_txn.id)
-            result_ids.append(match_result.id)
+            chosen.append((best, external_txn, len(available)))
+
+        # Phase 2: write in chunks. A chunk is one savepoint; if any claim in it conflicts (a
+        # concurrent writer, or a claim made earlier in the run) it is redone pair by pair so
+        # that only the conflicting pairs are skipped, exactly as before.
+        auto_matched = reviewed = skipped_conflicts = 0
+        result_ids: list[uuid.UUID] = []
+        for start in range(0, len(chosen), _WRITE_CHUNK):
+            chunk = chosen[start : start + _WRITE_CHUNK]
+            batch = self._write_chunk(chunk)
+            written: list[uuid.UUID | None] = (
+                [self._write_one(item) for item in chunk] if batch is None else list(batch)
+            )
+            for item, result_id in zip(chunk, written, strict=True):
+                if result_id is None:
+                    skipped_conflicts += 1
+                    continue
+                best, external_txn, _ = item
+                result_ids.append(result_id)
+                if best.decision == MatchDecision.AUTO_MATCH:
+                    best.internal_txn.match_status = "MATCHED"
+                    external_txn.match_status = "MATCHED"
+                    auto_matched += 1
+                else:
+                    # Review-band pairs are claimed, so no other candidate can take either side
+                    # while a human decides, but are not MATCHED until a reviewer confirms.
+                    reviewed += 1
+            self._session.flush()
 
         return FuzzyMatchOutcome(
             auto_matched_count=auto_matched,
@@ -114,6 +118,51 @@ class FuzzyMatchingStrategy:
             skipped_claim_conflict_count=skipped_conflicts,
             match_result_ids=result_ids,
         )
+
+    def _write_chunk(
+        self, chunk: list[tuple[ScoredCandidate, NormalisedTransaction, int]]
+    ) -> list[uuid.UUID] | None:
+        """Inserts every match and both of its claims as two multi-row statements (ids are made
+        here, so nothing needs to be read back). None means a claim conflicted and nothing was
+        written."""
+        results = [{"id": uuid.uuid4(), **self._match_columns(best, n)} for best, _, n in chunk]
+        claims = [
+            {
+                "normalised_transaction_id": txn_id,
+                "match_result_id": row["id"],
+                "role": role,
+                "status": "ACTIVE",
+            }
+            for row in results
+            for txn_id, role in (
+                (row["internal_transaction_id"], "INTERNAL"),
+                (row["external_transaction_id"], "EXTERNAL"),
+            )
+        ]
+        try:
+            with self._session.begin_nested():
+                self._session.execute(insert(MatchResult), results)
+                self._session.execute(insert(MatchClaim), claims)
+        except IntegrityError:
+            return None
+        return [row["id"] for row in results]
+
+    def _write_one(
+        self, item: tuple[ScoredCandidate, NormalisedTransaction, int]
+    ) -> uuid.UUID | None:
+        best, external_txn, candidate_count = item
+        try:
+            internal_claim, external_claim = self._claims.claim_pair(
+                best.internal_txn.id, external_txn.id
+            )
+        except ClaimConflictError:
+            return None
+        match_result = MatchResult(**self._match_columns(best, candidate_count))
+        self._session.add(match_result)
+        self._session.flush()
+        self._claims.finalise(internal_claim, match_result.id)
+        self._claims.finalise(external_claim, match_result.id)
+        return match_result.id
 
     def _best_candidate(
         self, external_txn: NormalisedTransaction, candidates: list[NormalisedTransaction]
@@ -132,41 +181,23 @@ class FuzzyMatchingStrategy:
             return None
         return max(matchable, key=lambda s: s.confidence)
 
-    def _create_match_result(self, scored: ScoredCandidate, *, candidate_count: int) -> MatchResult:
+    def _match_columns(self, scored: ScoredCandidate, candidate_count: int) -> dict[str, Any]:
         status = "AUTO_MATCHED" if scored.decision == MatchDecision.AUTO_MATCH else "PENDING_REVIEW"
-        return MatchResult(
-            run_id=self._run_id,
-            match_type="FUZZY",
-            status=status,
-            confidence=scored.confidence,
-            internal_transaction_id=scored.internal_txn.id,
-            external_transaction_id=scored.external_txn.id,
-            field_scores=scored.field_scores,
-            weights_version=scored.weights_version,
-            matched_fields={
+        return {
+            "run_id": self._run_id,
+            "match_type": "FUZZY",
+            "status": status,
+            "confidence": scored.confidence,
+            "internal_transaction_id": scored.internal_txn.id,
+            "external_transaction_id": scored.external_txn.id,
+            "field_scores": scored.field_scores,
+            "weights_version": scored.weights_version,
+            "matched_fields": {
                 "normalised_reference": scored.internal_txn.normalised_reference,
                 "amount_minor": scored.internal_txn.amount_minor,
             },
-            hard_constraints_passed=scored.hard_constraints_passed,
-            candidate_count=candidate_count,
-            rationale=scored.rationale,
-            matched_on_date=scored.external_txn.txn_date,
-        )
-
-    def _rejected_pairs(
-        self, internal_candidates: list[NormalisedTransaction]
-    ) -> set[tuple[uuid.UUID, uuid.UUID]]:
-        """(internal, external) pairs a human has rejected; never proposed again."""
-        ids = [t.id for t in internal_candidates]
-        pairs: set[tuple[uuid.UUID, uuid.UUID]] = set()
-        for start in range(0, len(ids), 5000):
-            rows = self._session.execute(
-                select(
-                    MatchResult.internal_transaction_id, MatchResult.external_transaction_id
-                ).where(
-                    MatchResult.status == "REJECTED",
-                    MatchResult.internal_transaction_id.in_(ids[start : start + 5000]),
-                )
-            )
-            pairs.update((row[0], row[1]) for row in rows)
-        return pairs
+            "hard_constraints_passed": scored.hard_constraints_passed,
+            "candidate_count": candidate_count,
+            "rationale": scored.rationale,
+            "matched_on_date": scored.external_txn.txn_date,
+        }

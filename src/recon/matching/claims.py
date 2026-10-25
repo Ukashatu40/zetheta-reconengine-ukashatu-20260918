@@ -22,6 +22,7 @@ matching strategy's job, not this service's.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from sqlalchemy.exc import IntegrityError
@@ -89,6 +90,21 @@ class ClaimsService:
         except IntegrityError as exc:
             raise ClaimConflictError(internal_id, external_id) from exc
         return internal_claim, external_claim
+
+    def claim_group(self, members: Sequence[tuple[uuid.UUID, str]]) -> list[MatchClaim]:
+        """Claims every (transaction id, role) pair of a split or netted group
+        atomically: all claims exist afterwards or none does, in the order given."""
+        claims = [
+            MatchClaim(normalised_transaction_id=txn_id, role=role, status="ACTIVE")
+            for txn_id, role in members
+        ]
+        try:
+            with self._session.begin_nested():
+                self._session.add_all(claims)
+                self._session.flush()
+        except IntegrityError as exc:
+            raise ClaimConflictError(*(txn_id for txn_id, _ in members)) from exc
+        return claims
 
     def finalise(self, claim: MatchClaim, match_result_id: uuid.UUID) -> None:
         """Records the match_result_id a previously-created claim belongs
