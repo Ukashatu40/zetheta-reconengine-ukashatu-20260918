@@ -21,7 +21,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import CheckConstraint, Date, DateTime, Integer, Numeric, String, Text, text
+from sqlalchemy import CheckConstraint, Date, DateTime, Index, Integer, Numeric, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -52,6 +52,8 @@ class MatchResult(Base):
     matched_fields: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     hard_constraints_passed: Mapped[bool] = mapped_column(nullable=False, server_default="true")
     rule_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    # Shared by every row of one split or netted match (A3.3).
+    match_group_id: Mapped[uuid.UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
     candidate_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
     rationale: Mapped[str] = mapped_column(Text, nullable=False)
 
@@ -73,6 +75,18 @@ class MatchResult(Base):
             name="status_valid",
         ),
         CheckConstraint("confidence >= 0 AND confidence <= 1", name="confidence_range"),
+        # Looked up by the exact matchers so a pair an analyst unmatched is never re-matched.
+        Index(
+            "ix_match_results_rejected_pair",
+            "internal_transaction_id",
+            "external_transaction_id",
+            postgresql_where=text("status = 'REJECTED'"),
+        ),
+        Index(
+            "ix_match_results_match_group_id",
+            "match_group_id",
+            postgresql_where=text("match_group_id IS NOT NULL"),
+        ),
         # AE-10 enforced at the database level, not just by application
         # discipline: an AUTO_MATCHED row must have crossed the auto-match
         # threshold. This mirrors the reasoning behind match_claims'

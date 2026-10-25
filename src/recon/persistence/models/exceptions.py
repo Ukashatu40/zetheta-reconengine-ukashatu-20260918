@@ -40,7 +40,15 @@ def _in_list(column: str, values: Iterable[StrEnum]) -> str:
     return f"{column} IN (" + ", ".join(f"'{v.value}'" for v in values) + ")"
 
 
-EVENT_TYPES = ("CREATED", "ESCALATED", "SLA_BREACHED", "ASSIGNED", "RESOLVED", "REOPENED")
+EVENT_TYPES = (
+    "CREATED",
+    "ESCALATED",
+    "SLA_BREACHED",
+    "ASSIGNED",
+    "RESOLVED",
+    "REOPENED",
+    "OVERRIDDEN",
+)
 _OPEN_STATUSES_SQL = "status IN ('OPEN', 'IN_REVIEW', 'ESCALATED', 'REOPENED')"
 
 
