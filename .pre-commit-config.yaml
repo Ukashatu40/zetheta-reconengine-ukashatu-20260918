@@ -34,3 +34,9 @@ repos:
         types: [python]
         pass_filenames: false
         args: ["--config-file=pyproject.toml"]
+      - id: golden-gate
+        name: golden dataset gate (pytest -m golden)
+        entry: make golden
+        language: system
+        pass_filenames: false
+        files: ^(src/recon/|config/|data/golden/)
