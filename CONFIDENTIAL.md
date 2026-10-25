@@ -8,7 +8,8 @@ is transferred to Zetheta in full on completion.
 
 ## Handling rules observed in this repository
 
-- The repository is **private** and was created private from the first commit.
+- The repository is for Zetheta and the assessor only and must be **private** before it is
+  submitted. Do not publish it or share it outside that circle.
 - No credentials, API keys, tokens or connection strings are committed. All
   configuration is supplied through environment variables; `.env.example`
   contains placeholder values only.
@@ -16,9 +17,10 @@ is transferred to Zetheta in full on completion.
   data in `data/` and `tests/fixtures/` is synthetic and generated from a fixed
   seed, in line with the Digital Personal Data Protection Act, 2023.
 - Card primary account numbers (PANs) are masked to the last four digits at the
-  ingestion boundary, before any persistence or logging. See `docs/SECURITY.md`.
+  ingestion boundary, before any persistence or logging, and a `PAN_EXPOSURE` alert is raised.
+  See `docs/SECURITY.md`.
 - Third-party material is limited to the open-source dependencies declared in
-  `pyproject.toml` and `frontend/package.json`.
+  `pyproject.toml` (and `frontend/package.json` once the front end exists).
 
 ## Attribution
 

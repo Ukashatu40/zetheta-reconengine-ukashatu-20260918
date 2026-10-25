@@ -1,5 +1,10 @@
 # SECTION 13 — Implementation Plan
 
+> **Historical.** This is the plan made before the work started. The work did not follow the
+> day-by-day split (the backend was completed in increments afterwards), and some items, such as
+> the React views, are not built. For what exists now see the README status table and
+> `REQUIREMENTS_MATRIX.md`.
+
 Mapped to the PDF's seven work-packages (per AE-C1's resolution), spread across a 15-day window. Commit messages are exactly as the PDF specifies.
 
 | WP      | PDF Checkpoint              | Calendar   | Content                                                                                                                                                         | Exit Criteria                                                                    |
