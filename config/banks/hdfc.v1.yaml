@@ -8,6 +8,11 @@ timezone: Asia/Kolkata
 currency_default: INR
 settlement_cycle: "T+1"
 reconciliation_window_days: 1
+expected_settlement_time: "18:00"
+fee_schedule:
+  fixed_minor: 500
+  percent: "0.10"
+  tolerance_minor: 1
 csv:
   delimiter: ","
   encoding: "utf-8"
