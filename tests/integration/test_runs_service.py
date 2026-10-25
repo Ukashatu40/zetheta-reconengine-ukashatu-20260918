@@ -138,7 +138,7 @@ def test_a_failed_run_rolls_back_its_matching_work_and_hides_the_detail(
         def __init__(self, *args: object, **kwargs: object) -> None:
             pass
 
-        def classify_unmatched(self, *args: object, **kwargs: object) -> None:
+        def classify_run(self, *args: object, **kwargs: object) -> None:
             raise RuntimeError("secret detail")
 
     f = make_ingestion_file(db_session)
@@ -172,7 +172,7 @@ def test_executing_a_finished_run_is_a_state_error(db_session: Session) -> None:
         service.execute(started.run.id)
 
 
-@pytest.mark.parametrize(("flag", "analyze_statements"), [(True, 2), (False, 0)])
+@pytest.mark.parametrize(("flag", "analyze_statements"), [(True, 3), (False, 0)])
 def test_a_run_uses_the_set_based_exact_stage_only_when_enabled(
     db_session: Session, flag: bool, analyze_statements: int
 ) -> None:
@@ -214,4 +214,4 @@ def test_the_default_settings_take_the_set_based_path(db_session: Session) -> No
     finally:
         profile.detach()
 
-    assert profile.counts[("ANALYZE", "-")] == 2
+    assert profile.counts[("ANALYZE", "-")] == 3
