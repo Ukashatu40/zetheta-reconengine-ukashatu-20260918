@@ -8,13 +8,31 @@ import logging
 import re
 import uuid
 from collections.abc import Awaitable, Callable
+from typing import Annotated
 
-from fastapi import FastAPI, Request, Response
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from recon import cache as cache_module
+from recon.api.deps import get_db
 from recon.api.errors import problem_response, request_id_of
-from recon.api.v1 import audit, dashboard, exceptions, matches, runs, upload
+from recon.api.ratelimit import rate_limit_middleware
+from recon.api.v1 import (
+    admin,
+    anomalies,
+    audit,
+    dashboard,
+    exceptions,
+    files,
+    fx,
+    matches,
+    reports,
+    runs,
+    upload,
+)
 
 logger = logging.getLogger("recon.api")
 _REQUEST_ID_PATTERN = re.compile(r"[A-Za-z0-9._-]{1,64}")
@@ -24,6 +42,11 @@ app = FastAPI(
     description="Zetheta Algorithms — Automated Reconciliation Engine for Multi-Bank Settlement",
     version="0.1.0",
 )
+
+
+# Registered before the request-id middleware so the request id is already set
+# when a rate-limit problem response is built (the last one added runs first).
+app.middleware("http")(rate_limit_middleware)
 
 
 @app.middleware("http")
@@ -65,10 +88,26 @@ def health_live() -> dict[str, str]:
 
 
 @app.get("/health/ready")
-def health_ready() -> dict[str, str]:
-    """Readiness: placeholder; a real DB and Redis check comes with the
-    operations work."""
-    return {"status": "ok"}
+def health_ready(
+    session: Annotated[Session, Depends(get_db)], response: Response
+) -> dict[str, object]:
+    """Readiness: the database must answer. Redis is optional (the cache and
+    limiter fail open), so its state is reported but never makes us unready."""
+    checks: dict[str, str] = {}
+    try:
+        session.execute(text("SELECT 1"))
+        checks["database"] = "ok"
+    except Exception:
+        logger.exception("readiness: database check failed")
+        checks["database"] = "down"
+    if cache_module.redis_configured():
+        checks["redis"] = "ok" if cache_module.get_cache().ping() else "down"
+    else:
+        checks["redis"] = "not_configured"
+    ready = checks["database"] == "ok"
+    if not ready:
+        response.status_code = 503
+    return {"status": "ok" if ready else "unavailable", "checks": checks}
 
 
 app.include_router(exceptions.router)
@@ -77,3 +116,8 @@ app.include_router(dashboard.router)
 app.include_router(runs.router)
 app.include_router(upload.router)
 app.include_router(matches.router)
+app.include_router(fx.router)
+app.include_router(anomalies.router)
+app.include_router(files.router)
+app.include_router(admin.router)
+app.include_router(reports.router)
