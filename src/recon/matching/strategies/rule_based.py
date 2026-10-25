@@ -26,6 +26,7 @@ from recon.matching.blocking.candidates import BlockingConfig, CandidateGenerato
 from recon.matching.claims import ClaimConflictError, ClaimsService
 from recon.matching.rules.base import Rule, RuleRegistry, RuleResult
 from recon.persistence.models import MatchResult, NormalisedTransaction
+from recon.persistence.repositories.matching import MatchingRepository
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,13 +60,20 @@ class RuleBasedMatchingStrategy:
         external_candidates: list[NormalisedTransaction],
     ) -> RuleMatchOutcome:
         generator = CandidateGenerator(internal_candidates, self._blocking_config)
+        rejected = MatchingRepository(self._session).rejected_pairs(
+            t.id for t in internal_candidates
+        )
         consumed: set[uuid.UUID] = set()
         auto_matched = review = ambiguous = conflicts = 0
         result_ids: list[uuid.UUID] = []
 
         for external_txn in external_candidates:
             candidate_set = generator.generate(external_txn)
-            available = [c for c in candidate_set.candidates if c.id not in consumed]
+            available = [
+                c
+                for c in candidate_set.candidates
+                if c.id not in consumed and (c.id, external_txn.id) not in rejected
+            ]
             hits = self._evaluate(available, external_txn)
             if not hits:
                 continue

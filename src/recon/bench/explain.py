@@ -40,6 +40,8 @@ def explain(session: Session, *, size: int, seed: int, analyze_first: bool) -> l
         str(PAIR_AND_CLAIM_SQL)
         .replace(":bank_code", f"'{BANK_CODE}'")
         .replace(":run_id", "'explain'")
+        .replace(":date_from", "NULL")
+        .replace(":date_to", "NULL")
     )
     rows = session.execute(text("EXPLAIN (ANALYZE, BUFFERS) " + sql))
     return [str(row[0]) for row in rows]

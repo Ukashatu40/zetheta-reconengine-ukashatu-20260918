@@ -198,3 +198,52 @@ def test_internal_claimed_before_the_run_is_skipped_as_a_conflict(db_session: Se
         .count()
         == 0
     )
+
+
+def _pairs(
+    session: Session, count: int
+) -> list[tuple[NormalisedTransaction, NormalisedTransaction]]:
+    f = make_ingestion_file(session)
+    pairs = []
+    for n in range(count):
+        ref = f"CHUNK{n:04d}XYZ"
+        internal = make_txn(
+            f.id, txn_id=ref, normalised_reference=ref, counterparty_name_normalised=f"PARTY {n}"
+        )
+        external = _external(
+            f.id, txn_id=ref, normalised_reference=ref, counterparty_name_normalised=f"PARTY {n}"
+        )
+        pairs.append((internal, external))
+    session.add_all([t for pair in pairs for t in pair])
+    session.flush()
+    return pairs
+
+
+def test_many_matches_are_written_together_with_both_claims_each(db_session: Session) -> None:
+    pairs = _pairs(db_session, 12)
+
+    outcome = _strategy(db_session, "fz-bulk").run([i for i, _ in pairs], [e for _, e in pairs])
+
+    assert (outcome.auto_matched_count, outcome.skipped_claim_conflict_count) == (12, 0)
+    claims = db_session.query(MatchClaim).filter(MatchClaim.status == "ACTIVE").all()
+    assert len(claims) == 24
+    assert all(c.match_result_id is not None for c in claims)
+    assert {c.match_result_id for c in claims} == set(outcome.match_result_ids)
+    assert all(i.match_status == e.match_status == "MATCHED" for i, e in pairs)
+
+
+def test_one_conflicting_claim_in_a_batch_skips_only_that_pair(db_session: Session) -> None:
+    """The batch falls back to pair-by-pair writing, so the other pairs still match."""
+    pairs = _pairs(db_session, 6)
+    ClaimsService(db_session).claim(pairs[3][0].id, "INTERNAL")  # held by an earlier pass
+
+    outcome = _strategy(db_session, "fz-fallback").run([i for i, _ in pairs], [e for _, e in pairs])
+
+    assert (outcome.auto_matched_count, outcome.skipped_claim_conflict_count) == (5, 1)
+    assert pairs[3][1].match_status == "UNMATCHED"
+    assert [p[0].match_status for p in pairs].count("MATCHED") == 5
+    results = db_session.query(MatchResult).filter(MatchResult.run_id == "fz-fallback").all()
+    assert len(results) == 5
+    for result in results:  # nothing half-written: each result has exactly its two claims
+        owned = db_session.query(MatchClaim).filter(MatchClaim.match_result_id == result.id)
+        assert owned.count() == 2

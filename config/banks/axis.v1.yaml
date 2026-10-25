@@ -9,6 +9,7 @@ timezone: Asia/Kolkata
 currency_default: INR
 settlement_cycle: "T+1"
 reconciliation_window_days: 1
+expected_settlement_time: "19:00"
 csv:
   delimiter: ","
   encoding: "utf-8"

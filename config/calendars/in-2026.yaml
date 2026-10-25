@@ -1,0 +1,25 @@
+# Indian bank holidays, 2026. Weekends (Saturday and Sunday) are handled by the
+# calendar itself and are not listed. Gazetted national holidays are fixed
+# dates; festival dates follow the lunar calendar and can shift by a day, so
+# treat this file as a maintained input: verify it against the RBI holiday
+# list for the year and edit it without a code change (A3.3).
+calendar: in
+year: 2026
+holidays:
+  - { date: "2026-01-26", name: Republic Day }
+  - { date: "2026-03-04", name: Holi }
+  - { date: "2026-03-26", name: Ram Navami }
+  - { date: "2026-03-31", name: Mahavir Jayanti }
+  - { date: "2026-04-03", name: Good Friday }
+  - { date: "2026-04-14", name: Ambedkar Jayanti }
+  - { date: "2026-05-01", name: Buddha Purnima }
+  - { date: "2026-05-27", name: Bakri Id }
+  - { date: "2026-06-26", name: Muharram }
+  - { date: "2026-08-15", name: Independence Day }
+  - { date: "2026-08-26", name: Milad-un-Nabi }
+  - { date: "2026-09-04", name: Janmashtami }
+  - { date: "2026-10-02", name: Gandhi Jayanti }
+  - { date: "2026-10-20", name: Dussehra }
+  - { date: "2026-11-10", name: Diwali (Govardhan Puja) }
+  - { date: "2026-11-24", name: Guru Nanak Jayanti }
+  - { date: "2026-12-25", name: Christmas }

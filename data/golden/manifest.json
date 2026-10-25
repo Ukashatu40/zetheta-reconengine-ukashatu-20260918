@@ -1,0 +1,3012 @@
+{
+  "anchor": "2026-03-12",
+  "as_of": "2026-03-13T12:00:00+00:00",
+  "exception_categories_planted": [
+    "AMOUNT_MISMATCH",
+    "CURRENCY_MISMATCH",
+    "DATE_MISMATCH",
+    "DIRECTION_REVERSAL",
+    "DUPLICATE_EXTERNAL",
+    "DUPLICATE_INTERNAL",
+    "FEE_DEDUCTION",
+    "FORMAT_ERROR",
+    "FX_VARIANCE",
+    "MISSING_EXTERNAL",
+    "MISSING_INTERNAL",
+    "NETTED_SETTLEMENT",
+    "PARTIAL_MATCH",
+    "REFERENCE_TRUNCATED",
+    "REGULATORY_HOLD",
+    "REVERSAL_PENDING",
+    "SETTLEMENT_DELAY",
+    "STALE_TRANSACTION",
+    "TIMEZONE_OFFSET"
+  ],
+  "files": [
+    {
+      "bank": "HDFC",
+      "format": "CSV",
+      "name": "internal_ledger_hdfc_20260312.csv",
+      "sha256": "2bc1b26ef24c2b6b14af93730bc8a6701ca56a0ee9f6fad8566ca66bea930e2c",
+      "source": "INTERNAL"
+    },
+    {
+      "bank": "HDFC",
+      "format": "CSV",
+      "name": "hdfc_settlement_20260312.csv",
+      "sha256": "94b6a336615f75ef688b8e054b1a24b13820b3ade22d0466e0c9cbc48b6a5ef6",
+      "source": "EXTERNAL"
+    },
+    {
+      "bank": "ICICI",
+      "format": "CSV",
+      "name": "internal_ledger_icici_20260312.csv",
+      "sha256": "6d8e89875c8cc7445c9c9922fdc0924793560c62a2de4453e7798871c72fac09",
+      "source": "INTERNAL"
+    },
+    {
+      "bank": "ICICI",
+      "format": "CSV",
+      "name": "icici_settlement_20260312.csv",
+      "sha256": "a09e87e6aad6e4456471053eaab7498e6a745bea4c2da4bf326b24207b73b829",
+      "source": "EXTERNAL"
+    },
+    {
+      "bank": "AXIS",
+      "format": "CSV",
+      "name": "internal_ledger_axis_20260312.csv",
+      "sha256": "5b912578edc98655a43e25e98a689291482fbad1bed0d1b8e96a9d384800277b",
+      "source": "INTERNAL"
+    },
+    {
+      "bank": "AXIS",
+      "format": "MT940",
+      "name": "axis_mt940_20260312.sta",
+      "sha256": "f5b6da13e2f181647083b5afce55b31c455994d5427b068a933e282ff6feeaa7",
+      "source": "EXTERNAL"
+    },
+    {
+      "bank": "SBI",
+      "format": "CSV",
+      "name": "internal_ledger_sbi_20260312.csv",
+      "sha256": "47699ba36e3af0cb0ce8a15452b00ad92908e1d9f88e98dda95d943a1699627f",
+      "source": "INTERNAL"
+    },
+    {
+      "bank": "SBI",
+      "format": "MT940",
+      "name": "sbi_mt940_20260312.sta",
+      "sha256": "3c61ed6724aff2f6aaf0d206cb85e10e200a3cd176912ddf348959e8391320fc",
+      "source": "EXTERNAL"
+    },
+    {
+      "bank": "KOTAK",
+      "format": "CSV",
+      "name": "internal_ledger_kotak_20260312.csv",
+      "sha256": "a78881dbef14bef9fac3c059494efc7b724c432cc2689195e6478ce7992c3d06",
+      "source": "INTERNAL"
+    },
+    {
+      "bank": "KOTAK",
+      "format": "CAMT053",
+      "name": "kotak_camt053_20260312.xml",
+      "sha256": "30f66323cc8aa6d3cb9983d222cdadb456b416665e7ed2de85f61c25550efa7e",
+      "source": "EXTERNAL"
+    },
+    {
+      "bank": "KOTAK",
+      "format": "CAMT053",
+      "name": "kotak_camt053_usd_20260312.xml",
+      "sha256": "fad2407067294762e1e2bd80c48c60bd0401bb13852206b5844670ca3bd8ce2a",
+      "source": "EXTERNAL"
+    },
+    {
+      "bank": "KOTAK",
+      "format": "CAMT053",
+      "name": "kotak_camt053_gbp_20260312.xml",
+      "sha256": "f039965d48f6c2ec2e11a8645c33f8914eefb9c5933bfa8aa22811715616ee52",
+      "source": "EXTERNAL"
+    },
+    {
+      "bank": "KOTAK",
+      "format": "CAMT053",
+      "name": "kotak_camt053_sgd_20260312.xml",
+      "sha256": "c98b7a2898a395b820a135c07a29c407b07022fa82b54fe451670507a988a277",
+      "source": "EXTERNAL"
+    },
+    {
+      "bank": "YESB",
+      "format": "CSV",
+      "name": "internal_ledger_yesb_20260312.csv",
+      "sha256": "4abdfa6037484dab665bcbcf750004706897da32374e45444d7485bee4668b7e",
+      "source": "INTERNAL"
+    },
+    {
+      "bank": "YESB",
+      "format": "CSV",
+      "name": "yesb_settlement_20260312.csv",
+      "sha256": "18fd6bc3d2387c948fd06b605c20164a0cdabd04c58c3862445dde3271f1cd6b",
+      "source": "EXTERNAL"
+    },
+    {
+      "bank": "INDB",
+      "format": "CSV",
+      "name": "internal_ledger_indb_20260312.csv",
+      "sha256": "76ffddf214f556e4d7bac897be7850154b519be1f6689409d61884c0741bf4c9",
+      "source": "INTERNAL"
+    },
+    {
+      "bank": "INDB",
+      "format": "CSV",
+      "name": "indb_settlement_20260312.csv",
+      "sha256": "8f5671fc128192d2d682c8f9c5e9cc5cac9ccbfa7097de29986cdf49f59c8a7e",
+      "source": "EXTERNAL"
+    }
+  ],
+  "fx_rates_sha256": "a09b7fd4585a0d8ac29a2d81f2cb3772b98eb74aa3701dbda448c39bd331d743",
+  "generator_version": 1,
+  "scale": 1,
+  "scenario_counts": {
+    "category": 16,
+    "cross_currency": 1,
+    "exact": 115,
+    "fuzzy_auto": 25,
+    "fuzzy_review": 20,
+    "fx_variance_as_written": 1,
+    "netted": 5,
+    "netted_cross_currency": 1,
+    "split": 5,
+    "tolerance": 5
+  },
+  "scenarios": [
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000001"
+      ],
+      "id": "exact:HDF0000001",
+      "internal_refs": [
+        "HDF0000001"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000002"
+      ],
+      "id": "exact:HDF0000002",
+      "internal_refs": [
+        "HDF0000002"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000003"
+      ],
+      "id": "exact:HDF0000003",
+      "internal_refs": [
+        "HDF0000003"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000004"
+      ],
+      "id": "exact:HDF0000004",
+      "internal_refs": [
+        "HDF0000004"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000005"
+      ],
+      "id": "exact:HDF0000005",
+      "internal_refs": [
+        "HDF0000005"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000006"
+      ],
+      "id": "exact:HDF0000006",
+      "internal_refs": [
+        "HDF0000006"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000007"
+      ],
+      "id": "exact:HDF0000007",
+      "internal_refs": [
+        "HDF0000007"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000008"
+      ],
+      "id": "exact:HDF0000008",
+      "internal_refs": [
+        "HDF0000008"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000009"
+      ],
+      "id": "exact:HDF0000009",
+      "internal_refs": [
+        "HDF0000009"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000010"
+      ],
+      "id": "exact:HDF0000010",
+      "internal_refs": [
+        "HDF0000010"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000011"
+      ],
+      "id": "exact:HDF0000011",
+      "internal_refs": [
+        "HDF0000011"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000012"
+      ],
+      "id": "exact:HDF0000012",
+      "internal_refs": [
+        "HDF0000012"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000013"
+      ],
+      "id": "exact:HDF0000013",
+      "internal_refs": [
+        "HDF0000013"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000014"
+      ],
+      "id": "exact:HDF0000014",
+      "internal_refs": [
+        "HDF0000014"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000015"
+      ],
+      "id": "exact:HDF0000015",
+      "internal_refs": [
+        "HDF0000015"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000016"
+      ],
+      "id": "exact:HDF0000016",
+      "internal_refs": [
+        "HDF0000016"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000017"
+      ],
+      "id": "exact:HDF0000017",
+      "internal_refs": [
+        "HDF0000017"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000018"
+      ],
+      "id": "exact:HDF0000018",
+      "internal_refs": [
+        "HDF0000018"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000019"
+      ],
+      "id": "exact:HDF0000019",
+      "internal_refs": [
+        "HDF0000019"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000020"
+      ],
+      "id": "exact:HDF0000020",
+      "internal_refs": [
+        "HDF0000020"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000021"
+      ],
+      "id": "exact:HDF0000021",
+      "internal_refs": [
+        "HDF0000021"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000022"
+      ],
+      "id": "exact:HDF0000022",
+      "internal_refs": [
+        "HDF0000022"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000023"
+      ],
+      "id": "exact:HDF0000023",
+      "internal_refs": [
+        "HDF0000023"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000024"
+      ],
+      "id": "exact:HDF0000024",
+      "internal_refs": [
+        "HDF0000024"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000025"
+      ],
+      "id": "exact:HDF0000025",
+      "internal_refs": [
+        "HDF0000025"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000026"
+      ],
+      "id": "exact:HDF0000026",
+      "internal_refs": [
+        "HDF0000026"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000027"
+      ],
+      "id": "exact:HDF0000027",
+      "internal_refs": [
+        "HDF0000027"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000028"
+      ],
+      "id": "exact:HDF0000028",
+      "internal_refs": [
+        "HDF0000028"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000029"
+      ],
+      "id": "exact:HDF0000029",
+      "internal_refs": [
+        "HDF0000029"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000030"
+      ],
+      "id": "exact:HDF0000030",
+      "internal_refs": [
+        "HDF0000030"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000031"
+      ],
+      "id": "exact:HDF0000031",
+      "internal_refs": [
+        "HDF0000031"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000032"
+      ],
+      "id": "exact:HDF0000032",
+      "internal_refs": [
+        "HDF0000032"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000033"
+      ],
+      "id": "exact:HDF0000033",
+      "internal_refs": [
+        "HDF0000033"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000034"
+      ],
+      "id": "exact:HDF0000034",
+      "internal_refs": [
+        "HDF0000034"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000035"
+      ],
+      "id": "exact:HDF0000035",
+      "internal_refs": [
+        "HDF0000035"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000036"
+      ],
+      "id": "exact:HDF0000036",
+      "internal_refs": [
+        "HDF0000036"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000037"
+      ],
+      "id": "exact:HDF0000037",
+      "internal_refs": [
+        "HDF0000037"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000038"
+      ],
+      "id": "exact:HDF0000038",
+      "internal_refs": [
+        "HDF0000038"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000039"
+      ],
+      "id": "exact:HDF0000039",
+      "internal_refs": [
+        "HDF0000039"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "HDF0000040"
+      ],
+      "id": "exact:HDF0000040",
+      "internal_refs": [
+        "HDF0000040"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "HDG0000001A"
+      ],
+      "id": "fuzzy_auto:HDG0000001",
+      "internal_refs": [
+        "HDG0000001"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "HDG0000002A"
+      ],
+      "id": "fuzzy_auto:HDG0000002",
+      "internal_refs": [
+        "HDG0000002"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "HDG0000003A"
+      ],
+      "id": "fuzzy_auto:HDG0000003",
+      "internal_refs": [
+        "HDG0000003"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "HDG0000004A"
+      ],
+      "id": "fuzzy_auto:HDG0000004",
+      "internal_refs": [
+        "HDG0000004"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "HDG0000005A"
+      ],
+      "id": "fuzzy_auto:HDG0000005",
+      "internal_refs": [
+        "HDG0000005"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "HDG0000006A"
+      ],
+      "id": "fuzzy_auto:HDG0000006",
+      "internal_refs": [
+        "HDG0000006"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "HDG0000007A"
+      ],
+      "id": "fuzzy_auto:HDG0000007",
+      "internal_refs": [
+        "HDG0000007"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "HDG0000008A"
+      ],
+      "id": "fuzzy_auto:HDG0000008",
+      "internal_refs": [
+        "HDG0000008"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "HDG0000009A"
+      ],
+      "id": "fuzzy_auto:HDG0000009",
+      "internal_refs": [
+        "HDG0000009"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "HDG0000010A"
+      ],
+      "id": "fuzzy_auto:HDG0000010",
+      "internal_refs": [
+        "HDG0000010"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "HDG0000011A"
+      ],
+      "id": "fuzzy_auto:HDG0000011",
+      "internal_refs": [
+        "HDG0000011"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "HDG0000012A"
+      ],
+      "id": "fuzzy_auto:HDG0000012",
+      "internal_refs": [
+        "HDG0000012"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "HDG0000013A"
+      ],
+      "id": "fuzzy_auto:HDG0000013",
+      "internal_refs": [
+        "HDG0000013"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "HDG0000014A"
+      ],
+      "id": "fuzzy_auto:HDG0000014",
+      "internal_refs": [
+        "HDG0000014"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "HDG0000015A"
+      ],
+      "id": "fuzzy_auto:HDG0000015",
+      "internal_refs": [
+        "HDG0000015"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "TOLERANCE",
+      "external_refs": [
+        "HDT0000001"
+      ],
+      "id": "tolerance:HDT0000001",
+      "internal_refs": [
+        "HDT0000001"
+      ],
+      "kind": "tolerance",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "TOLERANCE",
+      "external_refs": [
+        "HDT0000002"
+      ],
+      "id": "tolerance:HDT0000002",
+      "internal_refs": [
+        "HDT0000002"
+      ],
+      "kind": "tolerance",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "TOLERANCE",
+      "external_refs": [
+        "HDT0000003"
+      ],
+      "id": "tolerance:HDT0000003",
+      "internal_refs": [
+        "HDT0000003"
+      ],
+      "kind": "tolerance",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "TOLERANCE",
+      "external_refs": [
+        "HDT0000004"
+      ],
+      "id": "tolerance:HDT0000004",
+      "internal_refs": [
+        "HDT0000004"
+      ],
+      "kind": "tolerance",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [],
+      "expect_match": "TOLERANCE",
+      "external_refs": [
+        "HDT0000005"
+      ],
+      "id": "tolerance:HDT0000005",
+      "internal_refs": [
+        "HDT0000005"
+      ],
+      "kind": "tolerance",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "AMOUNT_MISMATCH"
+      ],
+      "expect_match": "REVIEW",
+      "external_refs": [
+        "HDR0000001"
+      ],
+      "id": "fuzzy_review:HDR0000001",
+      "internal_refs": [
+        "HDR0000001"
+      ],
+      "kind": "fuzzy_review",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "AMOUNT_MISMATCH"
+      ],
+      "expect_match": "REVIEW",
+      "external_refs": [
+        "HDR0000002"
+      ],
+      "id": "fuzzy_review:HDR0000002",
+      "internal_refs": [
+        "HDR0000002"
+      ],
+      "kind": "fuzzy_review",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "AMOUNT_MISMATCH"
+      ],
+      "expect_match": "REVIEW",
+      "external_refs": [
+        "HDR0000003"
+      ],
+      "id": "fuzzy_review:HDR0000003",
+      "internal_refs": [
+        "HDR0000003"
+      ],
+      "kind": "fuzzy_review",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "AMOUNT_MISMATCH"
+      ],
+      "expect_match": "REVIEW",
+      "external_refs": [
+        "HDR0000004"
+      ],
+      "id": "fuzzy_review:HDR0000004",
+      "internal_refs": [
+        "HDR0000004"
+      ],
+      "kind": "fuzzy_review",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "AMOUNT_MISMATCH"
+      ],
+      "expect_match": "REVIEW",
+      "external_refs": [
+        "HDR0000005"
+      ],
+      "id": "fuzzy_review:HDR0000005",
+      "internal_refs": [
+        "HDR0000005"
+      ],
+      "kind": "fuzzy_review",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "AMOUNT_MISMATCH"
+      ],
+      "expect_match": "REVIEW",
+      "external_refs": [
+        "HDR0000006"
+      ],
+      "id": "fuzzy_review:HDR0000006",
+      "internal_refs": [
+        "HDR0000006"
+      ],
+      "kind": "fuzzy_review",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "AMOUNT_MISMATCH"
+      ],
+      "expect_match": "REVIEW",
+      "external_refs": [
+        "HDR0000007"
+      ],
+      "id": "fuzzy_review:HDR0000007",
+      "internal_refs": [
+        "HDR0000007"
+      ],
+      "kind": "fuzzy_review",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "AMOUNT_MISMATCH"
+      ],
+      "expect_match": "REVIEW",
+      "external_refs": [
+        "HDR0000008"
+      ],
+      "id": "fuzzy_review:HDR0000008",
+      "internal_refs": [
+        "HDR0000008"
+      ],
+      "kind": "fuzzy_review",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "AMOUNT_MISMATCH"
+      ],
+      "expect_match": "REVIEW",
+      "external_refs": [
+        "HDR0000009"
+      ],
+      "id": "fuzzy_review:HDR0000009",
+      "internal_refs": [
+        "HDR0000009"
+      ],
+      "kind": "fuzzy_review",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "AMOUNT_MISMATCH"
+      ],
+      "expect_match": "REVIEW",
+      "external_refs": [
+        "HDR0000010"
+      ],
+      "id": "fuzzy_review:HDR0000010",
+      "internal_refs": [
+        "HDR0000010"
+      ],
+      "kind": "fuzzy_review",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000001"
+      ],
+      "id": "exact:ICI0000001",
+      "internal_refs": [
+        "ICI0000001"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000002"
+      ],
+      "id": "exact:ICI0000002",
+      "internal_refs": [
+        "ICI0000002"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000003"
+      ],
+      "id": "exact:ICI0000003",
+      "internal_refs": [
+        "ICI0000003"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000004"
+      ],
+      "id": "exact:ICI0000004",
+      "internal_refs": [
+        "ICI0000004"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000005"
+      ],
+      "id": "exact:ICI0000005",
+      "internal_refs": [
+        "ICI0000005"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000006"
+      ],
+      "id": "exact:ICI0000006",
+      "internal_refs": [
+        "ICI0000006"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000007"
+      ],
+      "id": "exact:ICI0000007",
+      "internal_refs": [
+        "ICI0000007"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000008"
+      ],
+      "id": "exact:ICI0000008",
+      "internal_refs": [
+        "ICI0000008"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000009"
+      ],
+      "id": "exact:ICI0000009",
+      "internal_refs": [
+        "ICI0000009"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000010"
+      ],
+      "id": "exact:ICI0000010",
+      "internal_refs": [
+        "ICI0000010"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000011"
+      ],
+      "id": "exact:ICI0000011",
+      "internal_refs": [
+        "ICI0000011"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000012"
+      ],
+      "id": "exact:ICI0000012",
+      "internal_refs": [
+        "ICI0000012"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000013"
+      ],
+      "id": "exact:ICI0000013",
+      "internal_refs": [
+        "ICI0000013"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000014"
+      ],
+      "id": "exact:ICI0000014",
+      "internal_refs": [
+        "ICI0000014"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000015"
+      ],
+      "id": "exact:ICI0000015",
+      "internal_refs": [
+        "ICI0000015"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000016"
+      ],
+      "id": "exact:ICI0000016",
+      "internal_refs": [
+        "ICI0000016"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000017"
+      ],
+      "id": "exact:ICI0000017",
+      "internal_refs": [
+        "ICI0000017"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000018"
+      ],
+      "id": "exact:ICI0000018",
+      "internal_refs": [
+        "ICI0000018"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000019"
+      ],
+      "id": "exact:ICI0000019",
+      "internal_refs": [
+        "ICI0000019"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000020"
+      ],
+      "id": "exact:ICI0000020",
+      "internal_refs": [
+        "ICI0000020"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000021"
+      ],
+      "id": "exact:ICI0000021",
+      "internal_refs": [
+        "ICI0000021"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000022"
+      ],
+      "id": "exact:ICI0000022",
+      "internal_refs": [
+        "ICI0000022"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000023"
+      ],
+      "id": "exact:ICI0000023",
+      "internal_refs": [
+        "ICI0000023"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000024"
+      ],
+      "id": "exact:ICI0000024",
+      "internal_refs": [
+        "ICI0000024"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "ICI0000025"
+      ],
+      "id": "exact:ICI0000025",
+      "internal_refs": [
+        "ICI0000025"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "ICG0000001A"
+      ],
+      "id": "fuzzy_auto:ICG0000001",
+      "internal_refs": [
+        "ICG0000001"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "ICG0000002A"
+      ],
+      "id": "fuzzy_auto:ICG0000002",
+      "internal_refs": [
+        "ICG0000002"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "ICG0000003A"
+      ],
+      "id": "fuzzy_auto:ICG0000003",
+      "internal_refs": [
+        "ICG0000003"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "ICG0000004A"
+      ],
+      "id": "fuzzy_auto:ICG0000004",
+      "internal_refs": [
+        "ICG0000004"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "ICG0000005A"
+      ],
+      "id": "fuzzy_auto:ICG0000005",
+      "internal_refs": [
+        "ICG0000005"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "ICG0000006A"
+      ],
+      "id": "fuzzy_auto:ICG0000006",
+      "internal_refs": [
+        "ICG0000006"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "ICG0000007A"
+      ],
+      "id": "fuzzy_auto:ICG0000007",
+      "internal_refs": [
+        "ICG0000007"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "ICG0000008A"
+      ],
+      "id": "fuzzy_auto:ICG0000008",
+      "internal_refs": [
+        "ICG0000008"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "ICG0000009A"
+      ],
+      "id": "fuzzy_auto:ICG0000009",
+      "internal_refs": [
+        "ICG0000009"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "ICG0000010A"
+      ],
+      "id": "fuzzy_auto:ICG0000010",
+      "internal_refs": [
+        "ICG0000010"
+      ],
+      "kind": "fuzzy_auto",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [
+        "AMOUNT_MISMATCH"
+      ],
+      "expect_match": "REVIEW",
+      "external_refs": [
+        "ICR0000001"
+      ],
+      "id": "fuzzy_review:ICR0000001",
+      "internal_refs": [
+        "ICR0000001"
+      ],
+      "kind": "fuzzy_review",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [
+        "AMOUNT_MISMATCH"
+      ],
+      "expect_match": "REVIEW",
+      "external_refs": [
+        "ICR0000002"
+      ],
+      "id": "fuzzy_review:ICR0000002",
+      "internal_refs": [
+        "ICR0000002"
+      ],
+      "kind": "fuzzy_review",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [
+        "AMOUNT_MISMATCH"
+      ],
+      "expect_match": "REVIEW",
+      "external_refs": [
+        "ICR0000003"
+      ],
+      "id": "fuzzy_review:ICR0000003",
+      "internal_refs": [
+        "ICR0000003"
+      ],
+      "kind": "fuzzy_review",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [
+        "AMOUNT_MISMATCH"
+      ],
+      "expect_match": "REVIEW",
+      "external_refs": [
+        "ICR0000004"
+      ],
+      "id": "fuzzy_review:ICR0000004",
+      "internal_refs": [
+        "ICR0000004"
+      ],
+      "kind": "fuzzy_review",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [
+        "AMOUNT_MISMATCH"
+      ],
+      "expect_match": "REVIEW",
+      "external_refs": [
+        "ICR0000005"
+      ],
+      "id": "fuzzy_review:ICR0000005",
+      "internal_refs": [
+        "ICR0000005"
+      ],
+      "kind": "fuzzy_review",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [
+        "AMOUNT_MISMATCH"
+      ],
+      "expect_match": "REVIEW",
+      "external_refs": [
+        "ICR0000006"
+      ],
+      "id": "fuzzy_review:ICR0000006",
+      "internal_refs": [
+        "ICR0000006"
+      ],
+      "kind": "fuzzy_review",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [
+        "AMOUNT_MISMATCH"
+      ],
+      "expect_match": "REVIEW",
+      "external_refs": [
+        "ICR0000007"
+      ],
+      "id": "fuzzy_review:ICR0000007",
+      "internal_refs": [
+        "ICR0000007"
+      ],
+      "kind": "fuzzy_review",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [
+        "AMOUNT_MISMATCH"
+      ],
+      "expect_match": "REVIEW",
+      "external_refs": [
+        "ICR0000008"
+      ],
+      "id": "fuzzy_review:ICR0000008",
+      "internal_refs": [
+        "ICR0000008"
+      ],
+      "kind": "fuzzy_review",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [
+        "AMOUNT_MISMATCH"
+      ],
+      "expect_match": "REVIEW",
+      "external_refs": [
+        "ICR0000009"
+      ],
+      "id": "fuzzy_review:ICR0000009",
+      "internal_refs": [
+        "ICR0000009"
+      ],
+      "kind": "fuzzy_review",
+      "note": ""
+    },
+    {
+      "bank": "ICICI",
+      "expect_exceptions": [
+        "AMOUNT_MISMATCH"
+      ],
+      "expect_match": "REVIEW",
+      "external_refs": [
+        "ICR0000010"
+      ],
+      "id": "fuzzy_review:ICR0000010",
+      "internal_refs": [
+        "ICR0000010"
+      ],
+      "kind": "fuzzy_review",
+      "note": ""
+    },
+    {
+      "bank": "AXIS",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "AXS0000001"
+      ],
+      "id": "exact:AXS0000001",
+      "internal_refs": [
+        "AXS0000001"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "AXIS",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "AXS0000002"
+      ],
+      "id": "exact:AXS0000002",
+      "internal_refs": [
+        "AXS0000002"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "AXIS",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "AXS0000003"
+      ],
+      "id": "exact:AXS0000003",
+      "internal_refs": [
+        "AXS0000003"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "AXIS",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "AXS0000004"
+      ],
+      "id": "exact:AXS0000004",
+      "internal_refs": [
+        "AXS0000004"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "AXIS",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "AXS0000005"
+      ],
+      "id": "exact:AXS0000005",
+      "internal_refs": [
+        "AXS0000005"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "AXIS",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "AXS0000006"
+      ],
+      "id": "exact:AXS0000006",
+      "internal_refs": [
+        "AXS0000006"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "AXIS",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "AXS0000007"
+      ],
+      "id": "exact:AXS0000007",
+      "internal_refs": [
+        "AXS0000007"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "AXIS",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "AXS0000008"
+      ],
+      "id": "exact:AXS0000008",
+      "internal_refs": [
+        "AXS0000008"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "AXIS",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "AXS0000009"
+      ],
+      "id": "exact:AXS0000009",
+      "internal_refs": [
+        "AXS0000009"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "AXIS",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "AXS0000010"
+      ],
+      "id": "exact:AXS0000010",
+      "internal_refs": [
+        "AXS0000010"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "AXIS",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "AXS0000011"
+      ],
+      "id": "exact:AXS0000011",
+      "internal_refs": [
+        "AXS0000011"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "AXIS",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "AXS0000012"
+      ],
+      "id": "exact:AXS0000012",
+      "internal_refs": [
+        "AXS0000012"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "AXIS",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "AXS0000013"
+      ],
+      "id": "exact:AXS0000013",
+      "internal_refs": [
+        "AXS0000013"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "AXIS",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "AXS0000014"
+      ],
+      "id": "exact:AXS0000014",
+      "internal_refs": [
+        "AXS0000014"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "AXIS",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "AXS0000015"
+      ],
+      "id": "exact:AXS0000015",
+      "internal_refs": [
+        "AXS0000015"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "AXIS",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "AXS0000016"
+      ],
+      "id": "exact:AXS0000016",
+      "internal_refs": [
+        "AXS0000016"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "AXIS",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "AXS0000017"
+      ],
+      "id": "exact:AXS0000017",
+      "internal_refs": [
+        "AXS0000017"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "AXIS",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "AXS0000018"
+      ],
+      "id": "exact:AXS0000018",
+      "internal_refs": [
+        "AXS0000018"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "AXIS",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "AXS0000019"
+      ],
+      "id": "exact:AXS0000019",
+      "internal_refs": [
+        "AXS0000019"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "AXIS",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "AXS0000020"
+      ],
+      "id": "exact:AXS0000020",
+      "internal_refs": [
+        "AXS0000020"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "SBI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "SBI0000001"
+      ],
+      "id": "exact:SBI0000001",
+      "internal_refs": [
+        "SBI0000001"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "SBI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "SBI0000002"
+      ],
+      "id": "exact:SBI0000002",
+      "internal_refs": [
+        "SBI0000002"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "SBI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "SBI0000003"
+      ],
+      "id": "exact:SBI0000003",
+      "internal_refs": [
+        "SBI0000003"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "SBI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "SBI0000004"
+      ],
+      "id": "exact:SBI0000004",
+      "internal_refs": [
+        "SBI0000004"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "SBI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "SBI0000005"
+      ],
+      "id": "exact:SBI0000005",
+      "internal_refs": [
+        "SBI0000005"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "SBI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "SBI0000006"
+      ],
+      "id": "exact:SBI0000006",
+      "internal_refs": [
+        "SBI0000006"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "SBI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "SBI0000007"
+      ],
+      "id": "exact:SBI0000007",
+      "internal_refs": [
+        "SBI0000007"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "SBI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "SBI0000008"
+      ],
+      "id": "exact:SBI0000008",
+      "internal_refs": [
+        "SBI0000008"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "SBI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "SBI0000009"
+      ],
+      "id": "exact:SBI0000009",
+      "internal_refs": [
+        "SBI0000009"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "SBI",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "SBI0000010"
+      ],
+      "id": "exact:SBI0000010",
+      "internal_refs": [
+        "SBI0000010"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "KOTAK",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "KTK0000001"
+      ],
+      "id": "exact:KTK0000001",
+      "internal_refs": [
+        "KTK0000001"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "KOTAK",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "KTK0000002"
+      ],
+      "id": "exact:KTK0000002",
+      "internal_refs": [
+        "KTK0000002"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "KOTAK",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "KTK0000003"
+      ],
+      "id": "exact:KTK0000003",
+      "internal_refs": [
+        "KTK0000003"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "KOTAK",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "KTK0000004"
+      ],
+      "id": "exact:KTK0000004",
+      "internal_refs": [
+        "KTK0000004"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "KOTAK",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "KTK0000005"
+      ],
+      "id": "exact:KTK0000005",
+      "internal_refs": [
+        "KTK0000005"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "KOTAK",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "KTK0000006"
+      ],
+      "id": "exact:KTK0000006",
+      "internal_refs": [
+        "KTK0000006"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "KOTAK",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "KTK0000007"
+      ],
+      "id": "exact:KTK0000007",
+      "internal_refs": [
+        "KTK0000007"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "KOTAK",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "KTK0000008"
+      ],
+      "id": "exact:KTK0000008",
+      "internal_refs": [
+        "KTK0000008"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "KOTAK",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "KTK0000009"
+      ],
+      "id": "exact:KTK0000009",
+      "internal_refs": [
+        "KTK0000009"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "KOTAK",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "KTK0000010"
+      ],
+      "id": "exact:KTK0000010",
+      "internal_refs": [
+        "KTK0000010"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "YESB",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "YES0000001"
+      ],
+      "id": "exact:YES0000001",
+      "internal_refs": [
+        "YES0000001"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "YESB",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "YES0000002"
+      ],
+      "id": "exact:YES0000002",
+      "internal_refs": [
+        "YES0000002"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "YESB",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "YES0000003"
+      ],
+      "id": "exact:YES0000003",
+      "internal_refs": [
+        "YES0000003"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "YESB",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "YES0000004"
+      ],
+      "id": "exact:YES0000004",
+      "internal_refs": [
+        "YES0000004"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "YESB",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "YES0000005"
+      ],
+      "id": "exact:YES0000005",
+      "internal_refs": [
+        "YES0000005"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "INDB",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "IND0000001"
+      ],
+      "id": "exact:IND0000001",
+      "internal_refs": [
+        "IND0000001"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "INDB",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "IND0000002"
+      ],
+      "id": "exact:IND0000002",
+      "internal_refs": [
+        "IND0000002"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "INDB",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "IND0000003"
+      ],
+      "id": "exact:IND0000003",
+      "internal_refs": [
+        "IND0000003"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "INDB",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "IND0000004"
+      ],
+      "id": "exact:IND0000004",
+      "internal_refs": [
+        "IND0000004"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "INDB",
+      "expect_exceptions": [],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "IND0000005"
+      ],
+      "id": "exact:IND0000005",
+      "internal_refs": [
+        "IND0000005"
+      ],
+      "kind": "exact",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "PARTIAL_MATCH"
+      ],
+      "expect_match": "SPLIT",
+      "external_refs": [
+        "SPLH0000001-1",
+        "SPLH0000001-2",
+        "SPLH0000001-3"
+      ],
+      "id": "split:SPLH0000001",
+      "internal_refs": [
+        "SPLH0000001"
+      ],
+      "kind": "split",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "PARTIAL_MATCH"
+      ],
+      "expect_match": "SPLIT",
+      "external_refs": [
+        "SPLH0000002-1",
+        "SPLH0000002-2",
+        "SPLH0000002-3"
+      ],
+      "id": "split:SPLH0000002",
+      "internal_refs": [
+        "SPLH0000002"
+      ],
+      "kind": "split",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "PARTIAL_MATCH"
+      ],
+      "expect_match": "SPLIT",
+      "external_refs": [
+        "SPLH0000003-1",
+        "SPLH0000003-2",
+        "SPLH0000003-3"
+      ],
+      "id": "split:SPLH0000003",
+      "internal_refs": [
+        "SPLH0000003"
+      ],
+      "kind": "split",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "PARTIAL_MATCH"
+      ],
+      "expect_match": "SPLIT",
+      "external_refs": [
+        "SPLH0000004-1",
+        "SPLH0000004-2",
+        "SPLH0000004-3"
+      ],
+      "id": "split:SPLH0000004",
+      "internal_refs": [
+        "SPLH0000004"
+      ],
+      "kind": "split",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "PARTIAL_MATCH"
+      ],
+      "expect_match": "SPLIT",
+      "external_refs": [
+        "SPLH0000005-1",
+        "SPLH0000005-2",
+        "SPLH0000005-3"
+      ],
+      "id": "split:SPLH0000005",
+      "internal_refs": [
+        "SPLH0000005"
+      ],
+      "kind": "split",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "NETTED_SETTLEMENT"
+      ],
+      "expect_match": "NETTED",
+      "external_refs": [
+        "NETH0000001"
+      ],
+      "id": "netted:NETH0000001",
+      "internal_refs": [
+        "NETH0000001-01",
+        "NETH0000001-02",
+        "NETH0000001-03",
+        "NETH0000001-04"
+      ],
+      "kind": "netted",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "NETTED_SETTLEMENT"
+      ],
+      "expect_match": "NETTED",
+      "external_refs": [
+        "NETH0000002"
+      ],
+      "id": "netted:NETH0000002",
+      "internal_refs": [
+        "NETH0000002-01",
+        "NETH0000002-02",
+        "NETH0000002-03",
+        "NETH0000002-04"
+      ],
+      "kind": "netted",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "NETTED_SETTLEMENT"
+      ],
+      "expect_match": "NETTED",
+      "external_refs": [
+        "NETH0000003"
+      ],
+      "id": "netted:NETH0000003",
+      "internal_refs": [
+        "NETH0000003-01",
+        "NETH0000003-02",
+        "NETH0000003-03",
+        "NETH0000003-04"
+      ],
+      "kind": "netted",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "NETTED_SETTLEMENT"
+      ],
+      "expect_match": "NETTED",
+      "external_refs": [
+        "NETH0000004"
+      ],
+      "id": "netted:NETH0000004",
+      "internal_refs": [
+        "NETH0000004-01",
+        "NETH0000004-02",
+        "NETH0000004-03",
+        "NETH0000004-04"
+      ],
+      "kind": "netted",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "NETTED_SETTLEMENT"
+      ],
+      "expect_match": "NETTED",
+      "external_refs": [
+        "NETH0000005"
+      ],
+      "id": "netted:NETH0000005",
+      "internal_refs": [
+        "NETH0000005-01",
+        "NETH0000005-02",
+        "NETH0000005-03",
+        "NETH0000005-04"
+      ],
+      "kind": "netted",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "MISSING_INTERNAL"
+      ],
+      "expect_match": null,
+      "external_refs": [
+        "ZMI0000001"
+      ],
+      "id": "cat:MISSING_INTERNAL:ZMI0000001",
+      "internal_refs": [],
+      "kind": "category",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "MISSING_EXTERNAL"
+      ],
+      "expect_match": null,
+      "external_refs": [],
+      "id": "cat:MISSING_EXTERNAL:QME0000001",
+      "internal_refs": [
+        "QME0000001"
+      ],
+      "kind": "category",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "STALE_TRANSACTION"
+      ],
+      "expect_match": null,
+      "external_refs": [],
+      "id": "cat:STALE_TRANSACTION:VST0000001",
+      "internal_refs": [
+        "VST0000001"
+      ],
+      "kind": "category",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "DIRECTION_REVERSAL"
+      ],
+      "expect_match": null,
+      "external_refs": [
+        "UDR0000001"
+      ],
+      "id": "cat:DIRECTION_REVERSAL:UDR0000001",
+      "internal_refs": [
+        "UDR0000001"
+      ],
+      "kind": "category",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "DUPLICATE_INTERNAL"
+      ],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "WDI0000001"
+      ],
+      "id": "cat:DUPLICATE_INTERNAL:WDI0000001",
+      "internal_refs": [
+        "WDI0000001"
+      ],
+      "kind": "category",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "DUPLICATE_EXTERNAL"
+      ],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "XDE0000001"
+      ],
+      "id": "cat:DUPLICATE_EXTERNAL:XDE0000001",
+      "internal_refs": [
+        "XDE0000001"
+      ],
+      "kind": "category",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "FEE_DEDUCTION"
+      ],
+      "expect_match": "CONFIRMED",
+      "external_refs": [
+        "TFE0000001"
+      ],
+      "id": "cat:FEE_DEDUCTION:TFE0000001",
+      "internal_refs": [
+        "TFE0000001"
+      ],
+      "kind": "category",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "DATE_MISMATCH",
+        "SETTLEMENT_DELAY"
+      ],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "SDM0000001"
+      ],
+      "id": "cat:DATE_MISMATCH:SDM0000001",
+      "internal_refs": [
+        "SDM0000001"
+      ],
+      "kind": "category",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "REFERENCE_TRUNCATED"
+      ],
+      "expect_match": "FUZZY",
+      "external_refs": [
+        "TRUNCATEDREF0000"
+      ],
+      "id": "cat:REFERENCE_TRUNCATED:TRUNCATEDREF0000ABCD",
+      "internal_refs": [
+        "TRUNCATEDREF0000ABCD"
+      ],
+      "kind": "category",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "REVERSAL_PENDING"
+      ],
+      "expect_match": null,
+      "external_refs": [],
+      "id": "cat:REVERSAL_PENDING:RRP0000001",
+      "internal_refs": [
+        "RRP0000001"
+      ],
+      "kind": "category",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "REGULATORY_HOLD"
+      ],
+      "expect_match": null,
+      "external_refs": [
+        "PHD0000001"
+      ],
+      "id": "cat:REGULATORY_HOLD:PHD0000001",
+      "internal_refs": [],
+      "kind": "category",
+      "note": ""
+    },
+    {
+      "bank": "HDFC",
+      "expect_exceptions": [
+        "FORMAT_ERROR"
+      ],
+      "expect_match": null,
+      "external_refs": [
+        "BFE0000001"
+      ],
+      "id": "cat:FORMAT_ERROR:BFE0000001",
+      "internal_refs": [],
+      "kind": "category",
+      "note": ""
+    },
+    {
+      "bank": "YESB",
+      "expect_exceptions": [
+        "TIMEZONE_OFFSET"
+      ],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "TZO0000001"
+      ],
+      "id": "cat:TIMEZONE_OFFSET:TZO0000001",
+      "internal_refs": [
+        "TZO0000001"
+      ],
+      "kind": "category",
+      "note": ""
+    },
+    {
+      "bank": "KOTAK",
+      "expect_exceptions": [
+        "SETTLEMENT_DELAY"
+      ],
+      "expect_match": "EXACT",
+      "external_refs": [
+        "KSD0000001"
+      ],
+      "id": "cat:SETTLEMENT_DELAY:KSD0000001",
+      "internal_refs": [
+        "KSD0000001"
+      ],
+      "kind": "category",
+      "note": ""
+    },
+    {
+      "bank": "KOTAK",
+      "expect_exceptions": [
+        "CURRENCY_MISMATCH"
+      ],
+      "expect_match": null,
+      "external_refs": [
+        "CCM0000001"
+      ],
+      "id": "cat:CURRENCY_MISMATCH:CCM0000001",
+      "internal_refs": [
+        "CCM0000001"
+      ],
+      "kind": "category",
+      "note": ""
+    },
+    {
+      "bank": "KOTAK",
+      "expect_exceptions": [
+        "FX_VARIANCE"
+      ],
+      "expect_match": null,
+      "external_refs": [
+        "FXV0000001"
+      ],
+      "id": "cat:FX_VARIANCE:FXV0000001",
+      "internal_refs": [
+        "FXV0000001"
+      ],
+      "kind": "category",
+      "note": ""
+    },
+    {
+      "bank": "KOTAK",
+      "expect_exceptions": [],
+      "expect_match": "CROSS_CURRENCY",
+      "external_refs": [
+        "FXK0000001"
+      ],
+      "id": "fx:FXK0000001",
+      "internal_refs": [
+        "FXK0000001"
+      ],
+      "kind": "cross_currency",
+      "note": ""
+    },
+    {
+      "bank": "KOTAK",
+      "expect_exceptions": [
+        "NETTED_SETTLEMENT"
+      ],
+      "expect_match": "NETTED",
+      "external_refs": [
+        "B42N"
+      ],
+      "id": "b42:corrected",
+      "internal_refs": [
+        "B42N-001",
+        "B42N-002",
+        "B42N-003",
+        "B42N-004",
+        "B42N-005",
+        "B42N-006",
+        "B42N-007",
+        "B42N-008",
+        "B42N-009",
+        "B42N-010",
+        "B42N-011",
+        "B42N-012",
+        "B42N-013",
+        "B42N-014",
+        "B42N-015",
+        "B42N-016",
+        "B42N-017",
+        "B42N-018",
+        "B42N-019",
+        "B42N-020",
+        "B42N-021",
+        "B42N-022",
+        "B42N-023"
+      ],
+      "kind": "netted_cross_currency",
+      "note": "AE-32 corrected figures"
+    },
+    {
+      "bank": "KOTAK",
+      "expect_exceptions": [
+        "FX_VARIANCE"
+      ],
+      "expect_match": null,
+      "external_refs": [
+        "B42W"
+      ],
+      "id": "b42:as-written",
+      "internal_refs": [
+        "B42W"
+      ],
+      "kind": "fx_variance_as_written",
+      "note": "AE-32 as written"
+    }
+  ],
+  "seed": 20260918
+}

@@ -60,6 +60,20 @@ class IngestionFile(Base):
     )
     ingested_by: Mapped[str] = mapped_column(String(100), nullable=False)
 
+    # INTERNAL ledger or EXTERNAL bank statement; null for files ingested before this was recorded.
+    source: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # Where the uploaded bytes were kept, so the SHA-256 can be re-verified later (Case Study C4).
+    stored_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # The last re-hash of the stored bytes against content_sha256: OK, TAMPERED or MISSING.
+    integrity_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    integrity_checked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # Set once the anomaly rules have scanned the file, so statistics are never counted twice.
+    anomaly_scanned_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="PENDING")
     record_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     parse_error_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
@@ -68,6 +82,10 @@ class IngestionFile(Base):
         CheckConstraint(
             "status IN ('PENDING', 'PARSED', 'PARTIALLY_PARSED', 'FAILED', 'REJECTED_DUPLICATE')",
             name="status_valid",
+        ),
+        CheckConstraint(
+            "integrity_status IS NULL OR integrity_status IN ('OK', 'TAMPERED', 'MISSING')",
+            name="integrity_status_valid",
         ),
         CheckConstraint("size_bytes >= 0", name="size_bytes_non_negative"),
         CheckConstraint("record_count >= 0", name="record_count_non_negative"),

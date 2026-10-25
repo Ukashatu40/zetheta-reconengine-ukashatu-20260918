@@ -57,8 +57,16 @@ class MatchReviewService:
         self._audit = audit
 
     def confirm(
-        self, match_id: uuid.UUID, *, reviewer: str, now: datetime, note: str | None = None
+        self,
+        match_id: uuid.UUID,
+        *,
+        reviewer: str,
+        now: datetime,
+        note: str | None = None,
+        automated: bool = False,
     ) -> MatchResult:
+        """automated=True records a SYSTEM actor (the auto-resolver confirming a
+        pair that an exception rule has explained) instead of an API-key user."""
         result = self._lock_pending(match_id)
         transactions = self._transactions(result)
         claims = self._active_claims(result.id)
@@ -81,6 +89,7 @@ class MatchReviewService:
             now=now,
             rationale=note or "confirmed without a note",
             after_status="CONFIRMED",
+            automated=automated,
         )
         self._session.flush()
         return result
@@ -154,11 +163,12 @@ class MatchReviewService:
         now: datetime,
         rationale: str,
         after_status: str,
+        automated: bool = False,
     ) -> None:
         self._audit.append(
             chain_id=MATCHING_CHAIN,
-            actor_type="USER",
-            actor_id=f"api-key:{reviewer}",
+            actor_type="SYSTEM" if automated else "USER",
+            actor_id=reviewer if automated else f"api-key:{reviewer}",
             action_type=action,
             occurred_at=now,
             affected_records={

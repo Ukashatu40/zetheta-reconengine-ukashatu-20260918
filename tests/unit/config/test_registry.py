@@ -6,5 +6,5 @@ from recon.config.registry import load_bank_configs
 
 def test_every_committed_bank_config_loads_keyed_by_bank_code() -> None:
     configs = load_bank_configs()
-    assert set(configs) == {"HDFC", "ICICI", "AXIS", "SBI", "KOTAK"}
+    assert set(configs) == {"HDFC", "ICICI", "AXIS", "SBI", "KOTAK", "YESB", "INDB"}
     assert all(c.bank_code == code for code, c in configs.items())

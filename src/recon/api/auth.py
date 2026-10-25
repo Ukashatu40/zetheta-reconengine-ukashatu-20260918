@@ -21,7 +21,7 @@ from fastapi.security import APIKeyHeader
 from sqlalchemy import select
 
 from recon.api.deps import SessionDep
-from recon.persistence.models import ApiKey
+from recon.persistence.models import ApiKey, User
 from recon.security.api_keys import hash_api_key
 from recon.security.rbac import Role, has_at_least
 
@@ -47,8 +47,13 @@ def authenticate(
     if not raw_key:
         raise _unauthorized()
     row = session.execute(
-        select(ApiKey.id, ApiKey.name, ApiKey.role).where(
-            ApiKey.key_hash == hash_api_key(raw_key), ApiKey.revoked_at.is_(None)
+        select(ApiKey.id, ApiKey.name, ApiKey.role)
+        .outerjoin(User, User.id == ApiKey.user_id)
+        .where(
+            ApiKey.key_hash == hash_api_key(raw_key),
+            ApiKey.revoked_at.is_(None),
+            # A key that belongs to a deactivated user stops working at once.
+            (ApiKey.user_id.is_(None)) | (User.is_active.is_(True)),
         )
     ).first()
     if row is None:

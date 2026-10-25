@@ -87,11 +87,16 @@ class NormalisedTransaction(Base):
     match_status: Mapped[str] = mapped_column(
         String(20), nullable=False, server_default="UNMATCHED"
     )
+    # Set when an auto-resolved DUPLICATE_INTERNAL voids this row: the original it duplicates.
+    voided_original_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), nullable=True
+    )
 
     __table_args__ = (
         CheckConstraint("direction IN ('DR', 'CR')", name="direction_valid"),
         CheckConstraint(
-            "match_status IN ('UNMATCHED', 'CLAIMED', 'MATCHED')", name="match_status_valid"
+            "match_status IN ('UNMATCHED', 'CLAIMED', 'MATCHED', 'VOIDED')",
+            name="match_status_valid",
         ),
         CheckConstraint("amount >= 0", name="amount_non_negative"),
         # The literal A6.2 index — created so R92 is satisfied exactly as

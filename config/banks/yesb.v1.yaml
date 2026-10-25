@@ -1,0 +1,27 @@
+# config/banks/yesb.v1.yaml
+# Yes Bank (PDF B1: one of the seven partner banks). Its CSV carries a time of
+# day, so two entries booked either side of midnight differ by a calendar day
+# but only minutes in time: the TIMEZONE_OFFSET case of A5.2.
+bank_code: YESB
+bank_name: Yes Bank
+config_version: yesb.v1
+supported_formats:
+  - CSV
+timezone: Asia/Kolkata
+currency_default: INR
+settlement_cycle: "T+1"
+reconciliation_window_days: 1
+expected_settlement_time: "20:30"
+csv:
+  delimiter: ","
+  encoding: "utf-8"
+  has_header: true
+  date_format: "%d-%m-%Y %H:%M"
+  amount_decimal_separator: "."
+  column_mapping:
+    reference: "Ref No"
+    txn_date: "Txn DateTime"
+    amount: "Amount"
+    direction: "Dr/Cr"
+    counterparty_name: "Counterparty"
+    narration: "Narration"

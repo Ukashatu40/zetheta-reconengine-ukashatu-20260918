@@ -66,6 +66,32 @@ class EscalationThresholds(BaseModel):
     systemic_exception_count: int = Field(gt=0)
 
 
+class DetectionConfig(BaseModel):
+    """What the classifier looks for beyond amounts, dates and references."""
+
+    model_config = ConfigDict(frozen=True)
+
+    # A narration containing any of these (as whole words) marks a record held
+    # for AML/CFT review (A4.1 #18).
+    regulatory_hold_keywords: list[str] = Field(
+        default_factory=lambda: [
+            "AML",
+            "CFT",
+            "REGULATORY HOLD",
+            "COMPLIANCE HOLD",
+            "COMPLIANCE REVIEW",
+            "FIU",
+        ]
+    )
+    # An internal entry whose narration carries one of these is a posted reversal.
+    reversal_keywords: list[str] = Field(default_factory=lambda: ["REVERSAL", "REVERSED"])
+    # Dates one calendar day apart whose instants are less than this many hours
+    # apart are a timezone artefact, not a late booking (A5.2).
+    timezone_offset_max_gap_hours: int = Field(default=24, gt=0)
+    # Banks cut references at this many characters (A4.1 #15).
+    truncated_reference_length: int = Field(default=16, gt=0)
+
+
 class TaxonomyConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -73,6 +99,7 @@ class TaxonomyConfig(BaseModel):
     value_thresholds: ValueThresholds
     auto_resolve: AutoResolveThresholds
     escalation: EscalationThresholds
+    detection: DetectionConfig = Field(default_factory=DetectionConfig)
     categories: list[CategoryRule]
 
     @model_validator(mode="after")

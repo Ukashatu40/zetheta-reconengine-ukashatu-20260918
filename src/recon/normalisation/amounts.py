@@ -70,8 +70,10 @@ def sign_for_direction(direction: str) -> int:
     reaching this function.
     """
     normalised = direction.strip().upper()
-    if normalised in ("C", "RC", "CRDT"):
+    # A reversal of a credit takes money back out (RC reduces a balance) and a reversal of a
+    # debit puts it back (RD increases it); this must agree with ingestion.balances (IB-16).
+    if normalised in ("C", "RD", "CRDT"):
         return 1
-    if normalised in ("D", "RD", "DBIT"):
+    if normalised in ("D", "RC", "DBIT"):
         return -1
     raise ValueError(f"{direction!r} is not a recognised direction mark")

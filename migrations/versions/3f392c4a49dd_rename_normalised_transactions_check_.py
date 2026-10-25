@@ -52,15 +52,32 @@ _RENAMES = [
 ]
 
 
+def _rename_if_present(old_name: str, new_name: str) -> None:
+    """Renames only when `old_name` exists. The original migration (7a48a435f36a) was
+    corrected after this one was written, so a database built from scratch already has the
+    right names and there is nothing to rename (IB-13: a fresh `alembic upgrade head` failed
+    here, which CI would have caught on its first run)."""
+    op.execute(f"""
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM pg_constraint
+                WHERE conname = '{old_name}'
+                  AND conrelid = 'normalised_transactions'::regclass
+            ) THEN
+                ALTER TABLE normalised_transactions
+                    RENAME CONSTRAINT "{old_name}" TO "{new_name}";
+            END IF;
+        END $$;
+        """)
+
+
 def upgrade() -> None:
     for old_name, new_name in _RENAMES:
-        op.execute(
-            f'ALTER TABLE normalised_transactions RENAME CONSTRAINT "{old_name}" TO "{new_name}"'
-        )
+        _rename_if_present(old_name, new_name)
 
 
 def downgrade() -> None:
-    for old_name, new_name in _RENAMES:
-        op.execute(
-            f'ALTER TABLE normalised_transactions RENAME CONSTRAINT "{new_name}" TO "{old_name}"'
-        )
+    # Nothing to restore: the broken, hash-suffixed names were the defect, not a state to
+    # return to. Downgrading leaves the correct names in place.
+    pass

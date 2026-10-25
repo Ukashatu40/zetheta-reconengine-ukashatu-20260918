@@ -1,0 +1,29 @@
+config_version: anomaly.v1
+# Case Study C2: three rules that look at a transaction against its own history,
+# independent of matching. Day 5 gives the numbers; min_history and the caps are
+# engineering decisions so a counterparty with three payments is not "an anomaly".
+amount_deviation:
+  sigma: "3.0" # flag |amount - mean| > sigma x standard deviation
+  min_history: 30 # transactions needed before the mean and deviation mean anything
+  whale_multiplier: "100" # C2 scenario "The Whale": a single amount over 100x the mean
+velocity:
+  multiplier: "2.0" # Day 5: more than 200% of the counterparty's daily average ...
+  window_minutes: 60 # ... inside any one-hour window
+  min_count: 3 # never alert on fewer than this many in the window
+  min_active_days: 3 # history needed for a daily average
+absence:
+  grace_minutes: 120 # Day 5: more than 2 hours past the expected time
+data_volume: # C6: ingestion volume far outside the bank's norm (possible exfiltration or a replay)
+  multiplier: "3.0"
+  min_files: 5
+settlement_uniqueness: # B4.4: the same settlement arriving in more than one file
+  overlap_fraction: "0.5" # this share of a new file's references already seen in an earlier file
+  min_overlap_count: 10
+match_rate: # B4.4: a match rate this high may mean duplicate data inflated it
+  threshold: "0.995"
+  min_externals: 50
+exception_rate: # A1.3 / C1: "reconciliation debt" begins above 5% of daily volume
+  threshold: "0.05"
+  min_transactions: 50
+backlog: # C1 scenario "The Exception Avalanche"
+  open_exceptions: 10000

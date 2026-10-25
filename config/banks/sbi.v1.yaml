@@ -4,9 +4,26 @@ bank_name: State Bank of India
 config_version: sbi.v1
 supported_formats:
   - MT940
+  - CSV
 timezone: Asia/Kolkata
 currency_default: INR
 settlement_cycle: "T+1"
 reconciliation_window_days: 1
+expected_settlement_time: "20:00"
 mt940:
   decimal_separator: ","
+# The CSV section serves the aggregator's internal-ledger export for SBI
+# settlements; SBI's own statements arrive as MT940.
+csv:
+  delimiter: ","
+  encoding: "utf-8"
+  has_header: true
+  date_format: "%Y-%m-%d"
+  amount_decimal_separator: "."
+  column_mapping:
+    reference: "Ledger Ref"
+    txn_date: "Posting Date"
+    amount: "Amount"
+    direction: "DR/CR"
+    counterparty_name: "Party"
+    narration: "Narration"
